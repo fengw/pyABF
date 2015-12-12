@@ -1,0 +1,15 @@
+#===========================================
+# module to do Averaging-based Factorization analysis 
+# ==========================================
+Requirement
+
+python 2.7 
+Java
+
+optional (to do the NGA analysis)
+    OpenSHA
+    Matlab 
+
+
+
+
