@@ -7,171 +7,98 @@ including:
 
 from utils import * 
 
-# add some functions uses my_utils to avoid adding that (like load, save etc.)
-class namespace:
-    """
-    Namespace with object attributes initialized from a dict
-    Turn Dictionary keys into object attributes
-    d['KeyName'] -> d.KeyName
-    d is a dictioanry
-    """
-    def __init__( self, d ):
-	self.__dict__.update(d) 
-
-
-# load dictionary saved in the python files
-def load( f, d=None ):
-    """ 
-    load variables from Python source files
-    Input:
-        f: file object (fid) 
-	   or filename with full path (string)
-	d: dictionary ( None default )
-    Output: 
-        namespace(d) : updated dictionary
-    """
-    if type(f) is not file:
-	f = open( os.path.expanduser(f) )   # get the file object
-    if d is None:
-	d = {}
-    exec f in d
-    return namespace( d ) 
-
-
-# save dictionary into python file (used in metadata manipulation)
-def save( fd, d, expand=None, keep=None, header=''):
-    """
-    Write variables from a dict into a Python source file.
-    """
-    if type( d ) is not dict:
-        d = d.__dict__
-
-    if expand is None:
-        expand = []
-    out = header
-    for k in sorted( d ):
-	if k not in expand and (keep is None or k in keep):
-	    out += '%s = %r\n' % (k, d[k])
-
-    for k in expand:
-        print 'test expand'
-	if k in d:
-            if type( d[k] ) is tuple:
-                out += k + ' = (\n'
-                for item in d[k]:
-                    out += '    %r,\n' % (item,)
-                out += ')\n'
-            elif type( d[k] ) is list:
-                out += k + ' = [\n'
-                for item in d[k]:
-                    out += '    %r,\n' % (item,)
-                out += ']\n'
-            elif type( d[k] ) is dict:
-                out += k + ' = {\n'
-                for item in sorted( d[k] ):
-                    out += '    %r: %r,\n' % (item, d[k][item])
-                out += '}\n'
-            else:
-                sys.exit( 'Cannot expand %s type %s' % ( k, type( d[k] ) ) )
-    if fd is not None:
-        if type( fd ) is not file:
-            fd = open( os.path.expanduser( fd ), 'w' )
-        fd.write( out )
-    return out
-
-
 class cybershk_nga:
     """
     Class of CyberShake Project
     Combined with NGA
     """
     def __init__( self, wkd, cybershk_database_Password,  \
-		  rup_model_ids=(35,5,3,1), \
-		  sids=[79,], periods=[3.0,], mflag='0', bb=None, \
-		  
-		  NGAs = {'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
-		          'BA':{'NewCoefs':None,'terms':(1,1,1)},\
-			  'CY':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
-			  'AS':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)},\
-			  'SC':{'NewCoefs':{'CB':None,'BA':None,'CY':None,'AS':None},\
-			       'predictors':{'cuteps':{'vr/vs':0.8,'c_cut':2.45,'s_cut':75,'r_cut':0.2,'d_cut':[40,70],'m_cut':[5.6,6.0]},}} \
-			 }, \
-		  Reference = { \
-			'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
-			'BA':{'NewCoefs':None,'terms':(1,1,1)},\
-			'CY':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
-			'AS':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)},\
-			'SC':{'NewCoefs':{'CB':None,'BA':None,'CY':None,'AS':None},\
-			'predictors':{'cuteps':{'vr/vs':0.8,'c_cut':2.45,'s_cut':75,'r_cut':0.2,'d_cut':[200,250],'m_cut':[5.6,6.0]},}} \
-			}  \
-              ):
-	
-        # Reference models (two flags, 4 digits)
+                  rup_model_ids=(35,5,3,1), \
+                  sids=[79,], periods=[3.0,], mflag='0', bb=None, \
+
+                  NGAs = {'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
+                          'BA':{'NewCoefs':None,'terms':(1,1,1)},\
+                          'CY':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
+                          'AS':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)},\
+                          'SC':{'NewCoefs':{'CB':None,'BA':None,'CY':None,'AS':None},\
+                                'predictors':{'cuteps':{'vr/vs':0.8,'c_cut':2.45,'s_cut':75,'r_cut':0.2,'d_cut':[40,70],'m_cut':[5.6,6.0]},}} \
+                          }, \
+                  Reference = { \
+                      'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
+                      'BA':{'NewCoefs':None,'terms':(1,1,1)},\
+                      'CY':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
+                      'AS':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)},\
+                      'SC':{'NewCoefs':{'CB':None,'BA':None,'CY':None,'AS':None},\
+                            'predictors':{'cuteps':{'vr/vs':0.8,'c_cut':2.45,'s_cut':75,'r_cut':0.2,'d_cut':[200,250],'m_cut':[5.6,6.0]},}} \
+                      }  \
+                  ):
+
+	# Reference models (two flags, 4 digits)
 	self.rup_model_ids = rup_model_ids
 	self.erf_id, self.sgt_id, self.rup_scenario_id, self.vel_id = rup_model_ids
 	self.bb = bb   # broadband
 
 	self.prefix_id = 'ERF%s_SGT%s_RupVar%s_Vel%s'%(self.erf_id, self.sgt_id, self.rup_scenario_id, self.vel_id)
 	self.prefix_id1 = 'ERF%s_RupVar%s'%(self.erf_id, self.rup_scenario_id)
-	
+
 	self.sids = sids
 	self.periods = periods
 
 	# set outside this class (make notes for all possible models)
 	self.mflag = mflag      # Model flag (ABF)  (related with NGAs and Reference dictionary)
-	
+
 	# dictionary with key: CB,BA,CY,AS, and with subdictionary contains updated (if no, then set None) coefficients
-        self.NGAs = NGAs     
+	self.NGAs = NGAs     
 	self.Reference = Reference
 
 	self.wkd = wkd
 	self.util = os.path.join( self.wkd, 'utils' )
 	self.plots = os.path.join( self.wkd, 'plots' )     
 	self.scripts = os.path.join( self.wkd, 'scripts' )     # changable
-        self.datapth = os.path.join( self.wkd, 'data' )    # data 
+	self.datapth = os.path.join( self.wkd, 'data' )    # data 
 
-        # NGA and Directivity flatfile utility
+	# NGA and Directivity flatfile utility
 	#self.isodirect_pth = os.path.join( self.util, 'isodirect_util')
 	#self.rNGA_pth = os.path.join( self.util, 'nga_util' )
 	#self.fDcpt_pth = os.path.join( self.util, 'fD_compute' )
 	#self.fD_input = self.fDcpt_pth+'/inputs/' 
 	#self.fD_output = self.fDcpt_pth + '/outputs/' 
-	
+
 	self.metapth = os.path.join( self.wkd, 'metadata/' )   # preprocess
 	self.CSmeta0 = self.metapth+'CyberShake/'   # CyberShake
 	self.RupsMeta0 = self.metapth + 'Ruptures/' # Ruptures
 	self.CSmeta = self.CSmeta0 + self.prefix_id + '/'
 	self.RupsMeta = self.RupsMeta0 + self.prefix_id1 + '/'
 	self.NGAmeta = self.metapth + 'NGA08/'     # OpenSHA NGA outputs
-	
+
 	# major outputs for analysis (revise the directory distribution)
 	self.mapin = os.path.join( self.wkd, 'scripts/map_input/' )
 	self.modelrup_pth = self.mapin + 'Model_Rups%s/'%(self.mflag)
-        self.output_pth = os.path.join( self.modelrup_pth, self.prefix_id )
-	
-        # GMT plot related
+	self.output_pth = os.path.join( self.modelrup_pth, self.prefix_id )
+
+	# GMT plot related
 	self.mapin_sites = self.mapin + 'sites_map'
 	self.mapin_rups = self.mapin + 'rups_map'
 
-        self.modelrup_plot_pth = self.plots + '/Model_plots/'
-        self.modelrup_plot_pth0 = self.modelrup_plot_pth + 'Model%s/'%self.mflag
+	self.modelrup_plot_pth = self.plots + '/Model_plots/'
+	self.modelrup_plot_pth0 = self.modelrup_plot_pth + 'Model%s/'%self.mflag
 	self.modelrup_plot_pth00 = self.modelrup_plot_pth0 + self.prefix_id 
 
-        # scatter plot related
+	# scatter plot related
 	self.flatfile_plot_pth = self.plots + '/FlatFile_plots'
 	self.flatfile_plot_pth0 = self.flatfile_plot_pth + '/Model%s/'%self.mflag
 	self.flatfile_plot_pth00 = self.flatfile_plot_pth0 + self.prefix_id
 
 	# create required paths
 	newpth = [ self.plots, \
-		   self.metapth, self.mapin, \
-		   self.modelrup_pth, self.output_pth, \
-		   self.fD_input, self.fD_output, self.NGAmeta, \
-		   self.CSmeta0, self.RupsMeta0, self.CSmeta, self.RupsMeta,  \
-		   self.mapin_sites, self.mapin_rups,\
-		   self.modelrup_plot_pth, self.modelrup_plot_pth0, self.modelrup_plot_pth00, \
-		   self.flatfile_plot_pth, self.flatfile_plot_pth0, self.flatfile_plot_pth00, \
-		 ]
+	           self.metapth, self.mapin, \
+	           self.modelrup_pth, self.output_pth, \
+	           self.fD_input, self.fD_output, self.NGAmeta, \
+	           self.CSmeta0, self.RupsMeta0, self.CSmeta, self.RupsMeta,  \
+	           self.mapin_sites, self.mapin_rups,\
+	           self.modelrup_plot_pth, self.modelrup_plot_pth0, self.modelrup_plot_pth00, \
+	           self.flatfile_plot_pth, self.flatfile_plot_pth0, self.flatfile_plot_pth00, \
+	           ]
 
 	for ipth in xrange( len(newpth) ):
 	    f = newpth[ipth]
@@ -180,20 +107,20 @@ class cybershk_nga:
 
 	# NGA models (08 and SC08 available periods)
 	self.NGAmodel = ['CB','BA','CY','AS',]
-        self.Tlist = [2.0, 3.0, 5.0, 10.0]
+	self.Tlist = [2.0, 3.0, 5.0, 10.0]
 
 	# CyberShake database
 	hostname = 'focal.usc.edu'  # host                            
 	username = 'cybershk_ro'    # usrname                         
 	password = cybershk_database_Password   # password                        
 	database = 'CyberShake'     # Database name 
-	
+
 	try:
 	    self.db = mdb.connect( host = hostname, user = username, \
-				       passwd = password, db = database )
-        except:
+	                           passwd = password, db = database )
+	except:
 	    self.db = None
-        
+
 	# CyberShake geographical domain (same for all application in the workflow!!!)
 	zone = 11
 	rot = -30  # degree
@@ -201,14 +128,14 @@ class cybershk_nga:
 	inverse = False    # from lon/lat to xy
 	self.kwds = {'zone':zone,'origin':origin,'rot':rot,'inverse':inverse}   # all the same projection (global)
 
-        # CyberShake box (for interpolation)
+	# CyberShake box (for interpolation)
 	Lx, Ly = 199000, 113000    # in meters (to avoid the extrapolation error))
 	delta = 5000   # in meters  grid spacing for the regular mesh
 	shape = (
-		int( Lx/delta + 1.0 ),
-		int( Ly/delta + 1.0 ),
-		)
-	
+	    int( Lx/delta + 1.0 ),
+	    int( Ly/delta + 1.0 ),
+	)
+
 	# Cartesian grid (for interpolation)
 	nx = int(Lx/delta) + 1
 	ny = int(Ly/delta) + 1
@@ -216,19 +143,19 @@ class cybershk_nga:
 	y = np.arange( ny ) * delta
 
 	xx,yy = np.meshgrid( x, y )
-	
+
 	kwds = {'zone':zone,'origin':origin,'rot':rot,'inverse':inverse}   # all the same projection (global)
 	kwds['inverse'] = True
 	slon2d, slat2d = projection(xx,yy,**kwds)
 	Ny = xx.shape[0]
 	Nx = xx.shape[1]
 
-        # used in interpolation (ABF)
+	# used in interpolation (ABF)
 	self.Nloc = Ny*Nx
 
-        # used in fD_compute
+	# used in fD_compute
 	self.dimS = Nx, Ny, delta/1000.
-	
+
 	self.slon1d = slon2d.reshape( self.Nloc )                                                 
 	self.slat1d = slat2d.reshape( self.Nloc )
 
@@ -237,14 +164,14 @@ class cybershk_nga:
 	smooth = 0.01
 	self.method = {'name':'exp', 'smooth':smooth}
 
-        # sitedata (used in cybershk_sites function)
+	# sitedata (used in cybershk_sites function)
 	if self.vel_id in [2,4,]: 
 	    # CVM-H Basin depth info for the same set of sites
 	    self.cybershk_sitedata = wkd+'/data/Sites/cybershk_sites_info_cvmh.dat'
 	if self.vel_id in [1,]: 
 	    # CVM-S basin depth info (if for updated CVM-S, the basin depth value might change, keep this in mind when you show your results!!!)
 	    self.cybershk_sitedata = wkd+'/data/Sites/cybershk_sites_info_cvms4.dat'
-	
+
 	if self.vel_id in [5,]: 
 	    # CVM-S4i26 basin depth info (if for updated CVM-S, the basin depth value might change, keep this in mind when you show your results!!!)
 	    self.cybershk_sitedata = wkd+'/data/Sites/cybershk_sites_info_cvms4i26.dat'
@@ -253,9 +180,9 @@ class cybershk_nga:
 	    # BBP 1D velocity model, basin depth info 
 	    self.cybershk_sitedata = wkd+'/data/Sites/cybershk_sites_info_bbp1d.dat'
 	    print 'Site file:', self.cybershk_sitedata 
-	    
+
 	self.sites = cybershk_sites( self.cybershk_sitedata )
-    
+
 
     # Methods for the class
     def extract_database(self, sid, rid, RupVar=False, rup_model_ids=None):
@@ -271,24 +198,24 @@ class cybershk_nga:
 		raise ValueError
 
 	erf_id, sgt_id, rup_scenario_id, vel_id  = rup_model_ids 
-	
+
 	# original CyberShake IM 
 	CSmeta = self.CSmeta + '%s/'%sid 
 	if not os.path.exists( CSmeta ): 
 	    os.mkdir(CSmeta)
 	metafile = CSmeta + \
-		'meta_%s_%s_%s_%s_%s_%s.py'%(erf_id,sgt_id,rup_scenario_id,vel_id,sid,rid)
-	
+	    'meta_%s_%s_%s_%s_%s_%s.py'%(erf_id,sgt_id,rup_scenario_id,vel_id,sid,rid)
+
 	# Original Sources 
 	RupsMeta = self.RupsMeta + '%s/'%sid
 	if not os.path.exists( RupsMeta ): 
 	    os.mkdir(RupsMeta)
 	metafile1 = RupsMeta + \
-		    'meta_rup_%s_%s_%s.py'%(erf_id,rup_scenario_id,sid)
-	
+	    'meta_rup_%s_%s_%s.py'%(erf_id,rup_scenario_id,sid)
+
 	# stdout file (for debug)
 	fid_stdout = open( './stdout', 'w' )
-	
+
 	# Rupture Metafile (both extraction and saveing and loading metafiles are not time consuming)
 	if not os.path.exists( metafile1 ):
 
@@ -297,8 +224,8 @@ class cybershk_nga:
 	    cursor = self.db.cursor()
 	    rups_info = rup_gen( cursor, sid, rups_info, fid_stdout, erf_id=erf_id, rup_scenario_id=rup_scenario_id )
 	    meta1 = dict( 
-		    rups_info = rups_info, 
-		    )
+	        rups_info = rups_info, 
+	    )
 	    header = '# Rupture meta file for Source %s\n'%sid
 	    save(metafile1,meta1,header=header)
 
@@ -307,47 +234,47 @@ class cybershk_nga:
 
 	else:
 	    meta1 = load( metafile1 )
-	    
+
 	# IM metafiles (Extraction takes time, and loading time is much longer than the extracting)
 	if not os.path.exists( metafile ):
-	    
+
 	    sites_info = {}
 	    Ek = {}
-	
+
 	    fid_stdout.write('Meta.py generation = database extraction\n')
 	    fid_stdout.write( 'Source_ID=%s\n'%(sid) )
 
-            # all sites
+	    # all sites
 	    sites = self.sites     # cybershk_sites( self.cybershk_sitedata )
-	    
+
 	    for stanam in sites.keys():
 		# load one by one, for each one, it's fast, so the 
 		fid_stdout.write('=====================\n')
 		fid_stdout.write('Extraction for site %s\n'%stanam )
-		
+
 		cursor = self.db.cursor()  
 		sites_info,Ek = \
-			  im_gen( cursor,sid,rid,stanam,\
-				  sites_info,Ek,fid_stdout,\
-				  rup_model_ids = rup_model_ids,bb=self.bb)
+		    im_gen( cursor,sid,rid,stanam,\
+		            sites_info,Ek,fid_stdout,\
+		            rup_model_ids = rup_model_ids,bb=self.bb)
 		cursor.close()
-		
+
 		fid_stdout.write('Finish extraction for site %s\n'%stanam )
-	    
+
 	    # save to *.py for further use
 	    meta = dict( 
-		    sites_info = sites_info,
-		    im11 = Ek
-		    )
+	        sites_info = sites_info,
+	        im11 = Ek
+	    )
 	    header = '# Meta file for Source %s,%s \n'%(sid,rid)
 	    save( metafile, meta, header = header )
-	    
+
 	    # turn meta1 dictionary key to attributes to use below without load meta file
 	    meta = namespace(meta)
-	    
+
 	    # close what left
 	    fid_stdout.close()
-	
+
 	else:
 	    # if metafile exists, just load ( major time consuming and memory occupation )
 	    # this will cause the sites_info key problem by load function
@@ -356,19 +283,19 @@ class cybershk_nga:
 
 	if not RupVar:
 	    return meta1, meta
-	
+
 	else:
 	    # consider the rupture variance associated with one rupture and one hypocenter
 	    # This is very important! 
 	    # when deal with two CyberShake models, to keep using the same site set, you can select right here and make a unified site_info 
 	    # dictionary for all later operations (to save slip variability for example) 
 	    sites_run = meta.sites_info.keys()   # key to get site location and name corresponding for each sources (keep using this for the rest of workflow)
-	    
+
 	    periods = meta.im11['periods']
 	    Nsta = len(sites_run)
 	    stanam = sites_run[0]
-            Nh, Nf, Nt = np.array( meta.im11[stanam] ).shape
-            
+	    Nh, Nf, Nt = np.array( meta.im11[stanam] ).shape
+
 	    ih_start = 0
 	    ih_end = Nh 
 
@@ -390,25 +317,25 @@ class cybershk_nga:
 	Extract rupture info and save as metadata
 	"""
 	rups_info = {}
-	
+
 	if meta_save == True:
 
 	    metafile1 = self.RupsMeta + \
-			'meta_rup_%s_%s_%s.py'%(self.erf_id,self.rup_scenario_id,sid)
-	    
+	        'meta_rup_%s_%s_%s.py'%(self.erf_id,self.rup_scenario_id,sid)
+
 	    # get SQL cursor
 	    cursor = self.db.cursor()
 	    fid_stdout = open( './stdout', 'w' )
 	    if not os.path.exists( metafile1 ):
 		rups_info = rup_gen( cursor, sid, rups_info, fid_stdout, erf_id = self.erf_id, rup_scenario_id=self.rup_scenario_id )
-		
+
 		fid_stdout.close()
 		cursor.close()
 
 		# save rupture info into file
 		meta1 = dict( 
-			rups_info = rups_info, 
-			)
+		    rups_info = rups_info, 
+		)
 		header = '# Rupture meta file for rupture (%s, %s)\n'%(sid,rid)
 		save(metafile1,meta1,header=header)
 	else:
@@ -438,8 +365,8 @@ class cybershk_nga:
 	    fid_rup.write('%s %s\n'%(lon[ipoint], lat[ipoint]))
 	fid_rup.close()
 
-        Nh, Nf, hypo_loc = rups_info['hypo_slip']
-	
+	Nh, Nf, hypo_loc = rups_info['hypo_slip']
+
 	ih_start = 0
 	ih_end = Nh 
 
@@ -463,7 +390,7 @@ class cybershk_nga:
 	    site_name = meta.sites_info[sites_run[i]]['name']
 	    site_lon = meta.sites_info[sites_run[i]]['lon']
 	    site_lat = meta.sites_info[sites_run[i]]['lat']
-	    
+
 	    fid.write('%s %s\n'%(site_lon, site_lat) )
 	    fid1.write('%s %s %s %s %s %s %s\n'%(site_lon+0.05,site_lat+0.05,10,0,0,'LM',site_name))
 	fid.close()
@@ -480,7 +407,7 @@ class cybershk_nga:
 	    fid_srcinfo = open( flatfile_srcinfo, 'w' )
 	    header = 'SourceID RuptureID Mag FaultType HypoIndex'
 	    fid_srcinfo.write( '%s\n'%header )
-	
+
 	for ik in xrange( len( self.sids ) ):
 	    sid = self.sids[ik]
 	    meta_rups = meta1_rups[ik]
@@ -496,21 +423,21 @@ class cybershk_nga:
 	    Nhtmp = ''
 	    for ih in range( ih_start, ih_end ):
 		Nhtmp = Nhtmp + str(ih) + ' '
-	    
+
 	    for irup in xrange( len(rids) ):
 		src_info.append( [sid,rids[irup],Mws[irup],rake,dip,Ztor,Zbom,Nh,ih_start,ih_end] )
-		
+
 		if savefile == True:
 		    fid_srcinfo.write( '%s %s %s %s %s %s %s %s\n'%(sid,rid,Mw,rake,dip,Ztor,Zbom,Nhtmp) )
-	
+
 	if savefile == True:
 	    fid_srcinfo.close()
 
 	return src_info
- 
+
 
     def LocalModels(self,sites,meta):
-	
+
 	# sites comes form cybershk_sites function
 	# ... use meta to specify the interpolation
 	sites_run = meta.keys()
@@ -552,7 +479,7 @@ class cybershk_nga:
 
     # use OpenSHA NGA results (not use this one)
     def nga_OpenSHA(self,sid,rid,meta):
-        """
+	"""
 	Compute NGA from OpenSHA database for given rupture set
 	"""
 	OpenSHA_output = OpenSHA_nga_files(self.NGAmeta,sid,rid, self.Ti,erf_id=self.erf_id)
@@ -560,7 +487,7 @@ class cybershk_nga:
 	sites_run = meta.keys()
 	Ns = len(sites_run)
 
-        ngaOpenSHA = OpenSHA_nga( self.NGAmeta, self.NGAmodel, sid, rid, self.Ti, erf_id=self.erf_id )
+	ngaOpenSHA = OpenSHA_nga( self.NGAmeta, self.NGAmodel, sid, rid, self.Ti, erf_id=self.erf_id )
 	ngaO = {}
 	for inga,nga in enumerate( self.NGAmodel ):
 	    ngaO[nga] = []
@@ -569,7 +496,7 @@ class cybershk_nga:
 		ngaO[nga].append(ngaOpenSHA[nga][stanam])    # rearange the site order in terms of metafile for CS
 	    ngaO[nga] = np.exp( np.array( ngaO[nga] ) )
 
-        return ngaO
+	return ngaO
 
 
     # extract site info from OpenSHA 
@@ -588,44 +515,44 @@ class cybershk_nga:
 	for il in range( 1, len(lines) ):                                                 
 	    spl = lines[il].strip().split(',')
 	    stanam = spl[1]
-	    
+
 	    if stanam in self.sites.keys():
 		# further selection from OpenSHA outputs to get the exact site set as inputed (the very first step)
-		
+
 		# attention to basin depth (depend on CVM models) 
 		Z25 = float(self.sites[stanam]['Z2.5'])
 		Z10 = float(self.sites[stanam]['Z1.0'])*1000.    # in meter
 		Vs30 = float(self.sites[stanam]['Vs30_Wills_2006'])
-		
+
 		#  ID,  ShortName, Vs30 (m/s), Z2.5 (km),     Z1.0 (m),     Rjb,     Rrup,    Rx
 		sites_flat_str[stanam] = ' '.join((spl[0],stanam,str(Vs30), str(Z25), str(Z10),spl[-12],spl[-11],spl[-9]))
 		#sites_flat_str[stanam] = ' '.join((spl[0],stanam,spl[-18],spl[-17],spl[-15],spl[-12],spl[-11],spl[-9]))
-		
+
 		# ID Vs30 (m/s), Z2.5 (km),     Z1.0 (m),     Rjb,     Rrup,    Rx
 		#sites_flat[stanam] = [  int(spl[0]),float(spl[-18]),float(spl[-17]),float(spl[-15]),\
 		    #                  float(spl[-12]),float(spl[-11]),float(spl[-9]) ]
 		sites_flat[stanam] = [  int(spl[0]), Vs30, Z25, Z10,\
-				      float(spl[-12]),float(spl[-11]),float(spl[-9]) ]
+		                        float(spl[-12]),float(spl[-11]),float(spl[-9]) ]
 
 	# write flatfile (in the order of sites_run)
 	sites_run = meta.keys()
 	Ns = len(sites_run)
 
-        sites_flat1 = []
+	sites_flat1 = []
 	# get the order correct
-        for ista in xrange(Ns):
+	for ista in xrange(Ns):
 	    stanam = sites_run[ista]
 	    sites_flat1.append( sites_flat[stanam] )
 	del( sites_flat )
 
-        if savefile == True:
-	    
+	if savefile == True:
+
 	    prefix = 'SourceID%s_RuptureID%s'%(sid,0)
 	    flatfile = self.flatfile_pth+'/flatfile_%s/'%prefix
 	    if not os.path.exists( flatfile ):
 		os.mkdir( flatfile )
 	    flatfile_siteinfo = flatfile + 'sites_info'
-	
+
 	    fid_sites = open( flatfile_siteinfo, 'w' )
 	    #header = ' '.join(('ID','ShortName','Vs30 (m/s)','Z2.5 (km)','Z1.0 (m)','Rjb (km)','Rrup (km)','Rx (km)'))
 	    header = ' '.join(('ID','ShortName','Vs30','Z2.5','Z1.0','Rjb','Rrup','Rx'))
@@ -653,7 +580,7 @@ class cybershk_nga:
 	# sitesinfo
 	if sites_flat == None: 
 	    sites_flat = self.sites_flatfile(sid,meta,meta_rup)
-	
+
 	tmp1 = np.array( sites_flat )
 	Vs30 = list( tmp1[:,1] )   # in m/s
 	Z25 = list( tmp1[:,2] )    # in km
@@ -662,8 +589,8 @@ class cybershk_nga:
 	Rrup = list( tmp1[:,5] )
 	Rx = list( tmp1[:,6] )
 	del( tmp1 )
-        
-        if ref == 0:
+
+	if ref == 0:
 	    if NGAdict == None:
 		dict1 = self.NGAs
 	    else:
@@ -671,7 +598,7 @@ class cybershk_nga:
 	else:
 	    dict1 = self.Reference
 
-        if Ts != None: 
+	if Ts != None: 
 	    periods = Ts 
 	else: 
 	    periods = self.periods 
@@ -685,24 +612,86 @@ class cybershk_nga:
 	    for irup in xrange( len(Mws) ):
 		Mw = Mws[irup]
 		median, std, tau, sigma = NGA08(model_name, Mw, Rjb, Vs30, Ti, rake=rake,Mech=None,NGAs=dict1, \
-				     Rrup=Rrup, Rx=Rx, dip=dip,W=W,Ztor=Ztor,Z25=Z25,Z10=Z10,Fas=0,AB11=None,VsFlag=0)
+		                                Rrup=Rrup, Rx=Rx, dip=dip,W=W,Ztor=Ztor,Z25=Z25,Z10=Z10,Fas=0,AB11=None,VsFlag=0)
+		
 		ngaP[Tkey].append( [list(median), list(np.log(std)), list(np.log(tau)), list(np.log(sigma))] )
+
+	return ngaP   # [Tkey][irup][ista]
+
+
+    def nga2_Py(self, sid, meta_rup, meta, sites_flat=None, ref=0, Ts=None, model_name='BA', NGAdict=None):
+	"""
+	Compute NGA model, or reference models for given rupture set 
+	Using Python NGA classes to compute
+	and return Ekxs which has length Ns
+	"""
+	# commonly used predictors in all NGA models
+	Mws = meta_rup[0]
+	rake,dip,Ztor,Zbom = meta_rup[4:]
+
+	W = (Zbom-Ztor)/np.sin(dip*np.pi/180.)   #
 	
+	# check the application of pynga for NGA2
+	if model_name == 'BA': 
+	    model_name = 'BSSA'
+	if model_name == 'AS': 
+	    model_name = 'ASK'
+	    
+	# sitesinfo
+	if sites_flat == None: 
+	    sites_flat = self.sites_flatfile(sid,meta,meta_rup)
+
+	tmp1 = np.array( sites_flat )
+	Vs30 = list( tmp1[:,1] )   # in m/s
+	Z25 = list( tmp1[:,2] )    # in km
+	Z10 = list( tmp1[:,3] )    # in m
+	Rjb = list( tmp1[:,4] )
+	Rrup = list( tmp1[:,5] )
+	Rx = list( tmp1[:,6] )
+	del( tmp1 )
+
+	if ref == 0:
+	    if NGAdict == None:
+		dict1 = self.NGAs
+	    else:
+		dict1 = NGAdict # for updating purposes
+	else:
+	    dict1 = self.Reference
+
+	if Ts != None: 
+	    periods = Ts 
+	else: 
+	    periods = self.periods 
+
+	# use the new NGA utils (combinations)
+	ngaP = {}
+	for ip in xrange( len(periods) ):
+	    Ti = periods[ip] 
+	    Tkey = '%.2f'%Ti    # attention to the 0.075
+	    ngaP[Tkey] = []
+	    for irup in xrange( len(Mws) ):
+		Mw = Mws[irup]
+		median, std, tau, sigma = NGA14(model_name, Mw, Rjb, Vs30, Ti, rake=rake,Mech=None,NGAs=dict1, \
+		                                Rrup=Rrup, Rx=Rx, dip=dip,W=W,Ztor=Ztor,Z25=Z25,Z10=Z10,Fas=0,AB11=None,VsFlag=0)
+		
+		ngaP[Tkey].append( [list(median), list(np.log(std)), list(np.log(tau)), list(np.log(sigma))] )
+
 	return ngaP   # [Tkey][irup][ista]
 
 
 
+
     def SC08_cpt( self, rids ):
-	
+
 	rids1 = []
 	for i in xrange( len(self.sids) ): 
 	    rids1.append(rids[i][-1])
 	cpt_SC08(self.sids, rids1, self.CSmeta, self.RupsMeta, self.cybershk_sitedata, \
-		self.scripts, self.fDcpt_pth, self.util, self.kwds,  self.dimS, \
-		Tlist=self.Tlist, NGAmodel=self.NGAmodel,\
-		rup_model_ids = self.rup_model_ids, mflag=self.mflag )
-        return 1
-    
+	         self.scripts, self.fDcpt_pth, self.util, self.kwds,  self.dimS, \
+	         Tlist=self.Tlist, NGAmodel=self.NGAmodel,\
+	         rup_model_ids = self.rup_model_ids, mflag=self.mflag )
+	return 1
+
 
     def D_flatfile( self, sid, meta, meta_rup, savefile=False ):
 	"""
@@ -712,17 +701,17 @@ class cybershk_nga:
 	rid = meta_rup[1][-1]
 	SC08_outputs = SC08_files( sid, rid, self.fD_output, 'BA', erf_id = self.erf_id, rup_scenario_id = self.rup_scenario_id )
 	Nh = len(SC08_outputs)   # now Nh should include all hypocenters
-        
+
 	sites_run = meta.keys()
 	Ns = len(sites_run)
 
-        # ID and SiteName dict map
+	# ID and SiteName dict map
 	#print sid,rid
 	#site_ids = []; 
 	sites_id1 = {}
 	for i in xrange( len(sites_run) ):
 	    site_id = meta[sites_run[i]]['id']
-	 #   site_ids.append( site_id )
+	#   site_ids.append( site_id )
 	    if site_id == '297':
 		print sites_run[i]
 	    sites_id1['%s'%site_id] = sites_run[i]   # id and name
@@ -735,11 +724,11 @@ class cybershk_nga:
 	    for il in range( 1,len(lines) ):
 		spl = lines[il].strip().split(',')                                                        
 		#site_id = int(spl[0])  
-		
+
 		site_id = spl[0]
 		if sites_id1.has_key(site_id):
 		    stanam = sites_id1[site_id]
-                else: 
+		else: 
 		    continue
 
 		#if site_id in site_ids:
@@ -749,9 +738,9 @@ class cybershk_nga:
 
 		D_flat0['%s'%ih][stanam] = [float(spl[3]),float(spl[5]),float(spl[6]),float(spl[7]),float(spl[8]),float(spl[9])]   # return (Rrup,Rfn,Rfp,s,h,c')
 		D_flat_str['%s'%ih][stanam] = ' '.join((stanam,spl[3],spl[5],spl[6],spl[7],spl[8],spl[9]))
-        
+
 	D_flat = {}
-        for ih in xrange( Nh ):
+	for ih in xrange( Nh ):
 	    # all hypocenter
 	    D_flat['%s'%ih] = []
 	    for ista in xrange( Ns ):
@@ -760,11 +749,11 @@ class cybershk_nga:
 	    D_flat['%s'%ih] = np.array( D_flat['%s'%ih] )
 
 	del( D_flat0 )
-	
+
 	if savefile == True:
 	    prefix = 'SourceID%s_RuptureID%s'%(sid,rid)
 	    flatfile = self.flatfile_pth+'/flatfile_%s/'%prefix
-	    
+
 	    if not os.path.exists( flatfile ):
 		os.mkdir( flatfile )
 	    for ih in xrange( Nh ):
@@ -776,7 +765,7 @@ class cybershk_nga:
 		    stanam = sites_run[ista]
 		    fid_D.write('%s\n'%D_flat_str['%s'%ih][stanam])
 		fid_D.close()
-	
+
 	return D_flat
 
 
@@ -785,9 +774,9 @@ class cybershk_nga:
 	Extract from SC08 files for the directivity term (correction)
 	or use updated model to compute directivity correction 
 	"""
-	
+
 	sites_run = meta.keys()
-        Ns = len(sites_run)
+	Ns = len(sites_run)
 
 	if ref == 0:
 	    # compute Non-reference model
@@ -798,7 +787,7 @@ class cybershk_nga:
 	else:
 	    # compute reference model
 	    dict1 = self.Reference
-	
+
 	if Ts != None: 
 	    periods = Ts
 	else: 
@@ -815,7 +804,7 @@ class cybershk_nga:
 	for ih in range( ih_start, ih_end ):
 	    hkey = '%s'%ih
 	    Rrup[hkey] = []; ctildepr[hkey] = []; s[hkey] = []; h[hkey] = []; Rfn[hkey] = []; Rfp[hkey] = []
-	    
+
 	    tmp1 = D_flat[hkey]    
 	    Rrup[hkey] = list( tmp1[:,0] )
 	    Rfn[hkey] = list( tmp1[:,1] )
@@ -858,12 +847,12 @@ class cybershk_nga:
 		    site_id = spl[0]  
 		    stanam = sites_id1[site_id]
 		    tmp1[stanam] = np.exp(float(spl[index_t-len(self.Tlist)])+SC_a0)
-		
+
 		for ista in xrange( Ns ):
 		    stanam = sites_run[ista]
 		    ngaD[ih-ih_start].append( tmp1[stanam] )
 
-        
+
 	if NewCoefs != None or cuteps != None:
 	    #print 'Use nga.SC08_model to compute SC'
 	    ngaD = {} 
@@ -888,7 +877,7 @@ class cybershk_nga:
 			ngaD[Tkey][irup].append( SC08.fD )
 			if ip == 0 and irup == 0 and IDPcpt:
 			    IDP.append( SC08.IDP )
-        if IDPcpt:
+	if IDPcpt:
 	    return ngaD, IDP  # ngaD dim: [Tkey][irup][ihypo][ista]; IDP dim: [ihypo][ista]
 	else: 
 	    return ngaD
@@ -899,11 +888,11 @@ class cybershk_nga:
     # like main function
     # ========================
     def IM_cpt(self, NGAcpt=False, MBF_S=False, MBF_D=False,MBF_C=False):
-        
+
 	CyberShakeRvar = []
 	Sources = []
 
-        if NGAcpt:
+	if NGAcpt:
 	    ngaP = {}; ngaD = {}
 	    for inga, nga in enumerate( self.NGAmodel ):
 		ngaP[nga] = []
@@ -922,10 +911,10 @@ class cybershk_nga:
 		print 'Rupture %s'%rid
 		E_xfs, meta_rup, meta = self.extract_database( sid, rid, RupVar=True )
 		tmp.append( E_xfs )
-	        if rid == rids[ik][-1]:
+		if rid == rids[ik][-1]:
 		    meta1_sites.append(meta.sites_info)
 		    meta1_rups.append(meta_rup.rups_info['MR'])
-		
+
 	    CyberShakeRvar.append( tmp )
 
 	    # use the last rupture
@@ -941,13 +930,13 @@ class cybershk_nga:
 
 	    end_time = HourMinSecToSec()
 	    hour,min,sec = SecToHourMinSec(end_time-start_time,BlockName='Source %s'%(sid))
-	
+
 	if MBF_S: 
 	    nga = 'CB' 
 	    T = 3.0
 	    CBnga = CB08_nga() 
 
-            Fk = [] 
+	    Fk = [] 
 	    for ik in xrange(len(self.sids) ) : 
 		sid = self.sids[ik] 
 
@@ -960,7 +949,7 @@ class cybershk_nga:
 
 		W = (Zbom-Ztor)/np.sin(dip*np.pi/180.)   #
 		sites_flat = self.sites_flatfile(sid,meta,meta_rup)
-	    
+
 		tmp1 = np.array( sites_flat )
 		Vs30 = list( tmp1[:,1] )   # in m/s
 		Z25 = list( tmp1[:,2] )    # in km
@@ -974,7 +963,7 @@ class cybershk_nga:
 		    kwds = {'Rrup':Rrup,'Ztor':Ztor,'dip':dip,'Z25':Z25,'W':W}
 		    # site independent term
 		    # ...
-	    
+
 
 	if MBF_D: 
 	    # organize informat
@@ -982,8 +971,8 @@ class cybershk_nga:
 	    for ik in xrange( len(self.sids) ): 
 		D.append(ngaD['BA'][ik]['3.00']) # [ir][ih][ista]    r,k,x
 		Nsta1.append( len(meta1_sites[ik].keys()) )
-            Nsta = np.min( Nsta1 )
-            
+	    Nsta = np.min( Nsta1 )
+
 	    # calculate D_x given ik and ir 
 	    Dks = []
 	    for ik in xrange( len(self.sids) ): 
@@ -993,17 +982,17 @@ class cybershk_nga:
 		    Nh = tmp1.shape[0] 
 		    tmp = np.average( tmp1, axis=0, weights = np.ones(Nh)*1.0/Nh ) 
 		    Dks.append( tmp )   # [ik+ir][ista]
-	    
+
 	    # calculate Ds
 	    Ds = []
-            for ista in xrange( Nsta ): 
+	    for ista in xrange( Nsta ): 
 		ave = 0.0 
 		ielem = 0
 		for ik in xrange( len(self.sids) ): 
 		    Nr = len( D[ik] ) 
 		    for ir in xrange( Nr ): 
 			ave += Dks[ielem][ista]  
-		        ielem += 1 
+			ielem += 1 
 		ave = ave*1.0 / ielem 
 		Ds.append( ave )
 
@@ -1017,7 +1006,7 @@ class cybershk_nga:
 			tmp.append( Dks[ielem][ista] - Ds[ista] ) 
 		    ielem += 1
 		    dks.append( tmp ) # ik,ir,ista
-            
+
 	    # save into file for GMT plot 
 	    Gkxmfs0_pth= self.output_pth+'/Gkxmfs0'      # path to save the un-interpolated results
 	    dks0_pth = Gkxmfs0_pth + '/Cks_MBF' 
@@ -1037,15 +1026,15 @@ class cybershk_nga:
 			    slon = meta[sites_run[ista]]['lon']
 			    slat = meta[sites_run[ista]]['lat']
 			    fid.write( '%s %s %s\n'%(slon,slat,dks[ielem][ista]) )
-	            ielem += 1 
-	        fid.close()
-        
+		    ielem += 1 
+		fid.close()
+
 	if MBF_C: 
 	    nga = 'CB' 
 	    T = 3.0
 	    CBnga = CB08_nga() 
 
-            Fk = [] 
+	    Fk = [] 
 	    for ik in xrange(len(self.sids) ) : 
 		sid = self.sids[ik] 
 
@@ -1058,7 +1047,7 @@ class cybershk_nga:
 
 		W = (Zbom-Ztor)/np.sin(dip*np.pi/180.)   #
 		sites_flat = self.sites_flatfile(sid,meta,meta_rup)
-	    
+
 		tmp1 = np.array( sites_flat )
 		Vs30 = list( tmp1[:,1] )   # in m/s
 		Z25 = list( tmp1[:,2] )    # in km
@@ -1084,71 +1073,71 @@ class cybershk_nga:
 
 
     def GkxmfsAnalysis(self, CyberShakeRvar, sites_info, rups_info, Sources, srcPDF=None, Debug=False, \
-	    ngaP0k=None, ngaD0k=None, hypoPDF={'CyberShake':{'Beta':(1.0,1.0),},'CB':1,'BA':1,'CY':1,'AS':1}, Ref='BA00',MBF=False):
+                       ngaP0k=None, ngaD0k=None, hypoPDF={'CyberShake':{'Beta':(1.0,1.0),},'CB':1,'BA':1,'CY':1,'AS':1}, Ref='BA00',MBF=False):
 	# MBF: Test the correspondance between ABF and MBF 
 
 	# =============
-        # PATH info
+	# PATH info
 	# =============
 	Gkxmfs0_pth= self.output_pth+'/Gkxmfs0'      # path to save the un-interpolated results
-	
+
 	# slip
 	fkxmfs0_pth = Gkxmfs0_pth + '/Fkxmfs' 
 	SFkxms0_pth = Gkxmfs0_pth + '/SFkxms'
 	SFks0_pth = Gkxmfs0_pth + '/SFks'
-	
+
 	# magnitude
 	ekxms0_pth = Gkxmfs0_pth + '/Ekxms' 
 	SEkxs0_pth = Gkxmfs0_pth + '/SEkxs'
 	SEks0_pth = Gkxmfs0_pth + '/SEks'
 
-        # directivity
+	# directivity
 	dkxs0_pth = Gkxmfs0_pth + '/Dkxs' 
 	SDks0_pth = Gkxmfs0_pth + '/SDks' 
 
-        # Distance
+	# Distance
 	cks0_pth = Gkxmfs0_pth + '/Cks' 
 
-        # site effects
+	# site effects
 	bs0_pth = Gkxmfs0_pth + '/Bs'
-	
+
 	# average level
 	a0_pth = Gkxmfs0_pth + '/A'
-	
+
 	Gkxmfs_pth= self.output_pth+'/Gkxmfs'       # path to save the interpolated results
-        
+
 	# slip
 	fkxmfs_pth = Gkxmfs_pth + '/Fkxmfs' 
 	SFkxms_pth = Gkxmfs_pth + '/SFkxms'
 	SFks_pth = Gkxmfs_pth + '/SFks'
-	
+
 	# magnitude
 	ekxms_pth = Gkxmfs_pth + '/Ekxms' 
 	SEkxs_pth = Gkxmfs_pth + '/SEkxs'
 	SEks_pth = Gkxmfs_pth + '/SEks'
 
-        # directivity
+	# directivity
 	dkxs_pth = Gkxmfs_pth + '/Dkxs' 
 	SDks_pth = Gkxmfs_pth + '/SDks' 
 
-        # Distance
+	# Distance
 	cks_pth = Gkxmfs_pth + '/Cks' 
 
-        # basin
+	# basin
 	bs_pth = Gkxmfs_pth + '/Bs'
 	a_pth = Gkxmfs_pth + '/A'
 
 	for f in [Gkxmfs0_pth, fkxmfs0_pth, SFks0_pth, SFkxms0_pth, 
-		ekxms0_pth, SEkxs0_pth, SEks0_pth, 
-		dkxs0_pth, SDks0_pth, 
-		cks0_pth, bs0_pth, a0_pth,
-		Gkxmfs_pth, fkxmfs_pth, SFks_pth, SFkxms_pth, 
-		ekxms_pth, SEkxs_pth, SEks_pth, 
-		dkxs_pth, SDks_pth, 
-		cks_pth, bs_pth, a_pth, ]:
+	          ekxms0_pth, SEkxs0_pth, SEks0_pth, 
+	          dkxs0_pth, SDks0_pth, 
+	          cks0_pth, bs0_pth, a0_pth,
+	          Gkxmfs_pth, fkxmfs_pth, SFks_pth, SFkxms_pth, 
+	          ekxms_pth, SEkxs_pth, SEks_pth, 
+	          dkxs_pth, SDks_pth, 
+	          cks_pth, bs_pth, a_pth, ]:
 	    if not os.path.exists(f):
 		os.mkdir(f)
-	
+
 	if Debug: 
 	    debug_pth = self.output_pth  + '/Debug' 
 	    debug_hkxs_pth = debug_pth + '/Hkxs' 
@@ -1156,15 +1145,15 @@ class cybershk_nga:
 		if not os.path.exists( f ): 
 		    os.mkdir( f ) 
 
-        # ==================================
+	# ==================================
 	# set up weighting functions (once)
-        # ==================================
+	# ==================================
 	Nk = len( CyberShakeRvar )
 	print 'Source Number: ', Nk 
-        
+
 	Nstas = []
 
-        Nhs = []
+	Nhs = []
 	pdf_f = []; pdf_m = []
 	Tkey = '%.2f'%3.0   # just use one period
 	for ik in xrange( Nk ):
@@ -1174,7 +1163,7 @@ class cybershk_nga:
 		tmpCS.append( np.log( CyberShakeRvar[ik][irup][Tkey] ) )   # [irup][ih,islip,ista]
 	    tmp_CS = np.array( tmpCS )
 	    Nm, Nh, Nf, Nsta = tmp_CS.shape
-	    
+
 	    Nstas.append( Nsta )
 	    print 'The source %s has %s sites'%(Sources[ik],Nsta)
 
@@ -1186,7 +1175,7 @@ class cybershk_nga:
 	    # slip-distribution weighting function:
 	    for ivar in xrange( Nf ):
 		pdf_f[ik].append( 1./Nf ) 
-	    
+
 	    # magnitude distribution
 	    Mws, rids, Nrow, Ncol, rake, dip, ztor, zbom = rups_info[ik]
 	    AreaTmp = Nrow*Ncol  # in km
@@ -1195,7 +1184,7 @@ class cybershk_nga:
 	    prob0 = 1./(np.sqrt(2.*np.pi)*std) * np.exp(-0.5*((Mws-mu)/std)**2)
 	    pdf_m[ik] = prob0 / sum(prob0)    # weighting should be summed up to 1
 	    pdf_m[ik] = pdf_m[ik].tolist()
-	 
+
 	Nsta0 = np.min( Nstas ) 
 
 	# hypocenter location distribution (different half width)
@@ -1210,7 +1199,7 @@ class cybershk_nga:
 	    Nsigma = 1 
 	    sigmas = [sigmas,]
 
-        if keytmp == 'Gaussian':
+	if keytmp == 'Gaussian':
 	    for isigma in xrange( Nsigma ):
 		pdf_x.append([]) 
 		for ik in xrange( Nk ):
@@ -1225,7 +1214,7 @@ class cybershk_nga:
 		    else: 
 			# uniform distribution for hypocenters 
 			pdf_x[isigma].append( np.repeat( 1./Nh, Nh).tolist() )
-	
+
 	elif keytmp == 'Beta': 
 	    for isigma in xrange( Nsigma ): 
 		pdf_x.append([])
@@ -1243,22 +1232,22 @@ class cybershk_nga:
 	else: 
 	    print 'Use input srcPDF'
 	    pdf_k = srcPDF
-	
+
 	pdf_s0 = np.ones(Nsta)/(1.0*Nsta) 
 	pdf_s = np.ones(self.Nloc)/self.Nloc
-	
+
 	# =================
 	# ABF analysis
 	# =================
 	for it, Ti in enumerate( self.periods ): 
-	    
+
 	    Tkey = '%.2f'%Ti
 	    print 'Analysis at periods = %s sec'%(Tkey)
 
 	    print '='*30
 	    start_time0 = HourMinSecToSec(BlockName='Prepare CyberShake, Ref, and NGAs...')
 	    print '='*30
-	    
+
 	    # 1. CyberShake G and decomposition using ABF
 	    print 'CyberShake preparation'
 	    Gkxmfs = []
@@ -1271,8 +1260,8 @@ class cybershk_nga:
 		Nm, Nh, Nf, Nsta = tmp_CS.shape
 		Gkxmfs.append( tmp_CS )
 		del(tmpCS, tmp_CS)
-		
-            # 2. Use pre-defined NGA models as other reference model
+
+	    # 2. Use pre-defined NGA models as other reference model
 	    # Note: you can just generate tmp[ik,ir,ih,ista] (and do the abf with pdf_f = None to reduce the memory and calculation time) 
 	    # later you can just subtract between factors and save into file 
 	    print 'Reference model NGA-type preparation'
@@ -1290,14 +1279,14 @@ class cybershk_nga:
 
 		# compute IDP (as the parameter for directivity effects)
 		IDP0.append( np.array( IDP00 ) )
-		
+
 		for ir in xrange( Nm ):
 		    for ista in xrange( Nsta ):
 			for ih in xrange( Nh ): 
 			    tmp[ir,ih,ista] = np.log( ngaP[Tkey][ir][0][ista] ) + np.log( np.array(ngaD[Tkey][ir])[ih,ista] ) * DFlag
 		RefModel.append( tmp )
 		del(tmp)
-	    
+
 	    # 3. Prepare original NGA models (with directivity controlled)
 	    print 'NGA model preparation'
 	    TargetModel = {}
@@ -1307,7 +1296,7 @@ class cybershk_nga:
 		# for each nga model
 		TargetModel[nga] = []
 		for ik in xrange( Nk ):
-		    
+
 		    Nm, Nh, Nf, Nsta = Gkxmfs[ik].shape
 		    tmp = np.zeros( (Nm,Nh,Nsta) )
 		    sid = Sources[ik] 
@@ -1319,22 +1308,22 @@ class cybershk_nga:
 			ngaP = ngaP_tmp[Tkey]
 		    else: 
 			ngaP = ngaP0k[nga][ik][Tkey]
-		    
+
 		    if ngaD0k == None: 
 			#print 'compute NGA directivity model'
 			Mws = rups_info[ik][0]
 			ngaD_tmp = self.directivity_SC08(sid, Mws, Nh, sites_info[ik], rups_info[ik], Ts = [Ti,], model_name = nga )
 			ngaD = ngaD_tmp[Tkey]
-                    else: 
+		    else: 
 			ngaD = ngaD0k[nga][ik][Tkey]
-		    
+
 		    for ir in xrange( Nm ):
 			for ista in xrange( Nsta ):
 			    for ih in xrange( Nh ): 
 				tmp[ir,ih,ista] = np.log( ngaP[ir][0][ista] ) + np.log( np.array(ngaD[ir])[ih,ista] ) * hypoPDF[nga]
 		    TargetModel[nga].append( tmp )
 		    del(tmp,ngaP,ngaD)
-	    
+
 
 	    print '='*30
 	    end_time0 = HourMinSecToSec(BlockName='Preparation of CyberShake, Ref, and NGAs finished')
@@ -1375,23 +1364,23 @@ class cybershk_nga:
 			slat.append( meta[sites_run[i]]['lat'] )
 		    slon = np.array( slon )
 		    slat = np.array( slat )
-		    
+
 		    sites_info0 = self.sites_flatfile( Sources[ik], sites_info[ik], rups_info[ik] )    # Vs30 and Z1.0, Z2.5 (uninterpolated results)
-		    
+
 		    if ik == 0:
 			# compute once (all the same for all sources) 
 			# interpolate the site info (Vs30, Z2.5, Z1.0)
 			# add distance info for C-map test with NGA path effects
-			
+
 			# independent of velocity models
 			Vs30_0 = sites_info0[:,1]
 			Vs30 = interp( slon, slat, sites_info0[:,1], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
-			
+
 			Z25_0 = sites_info0[:,2]
 			Z10_0 = sites_info0[:,3]
 			Z25 = interp( slon, slat, sites_info0[:,2], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
 			Z10 = interp( slon, slat, sites_info0[:,3], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
-			
+
 		    Rjb_0.append(sites_info0[:,4])
 		    Rrup_0.append(sites_info0[:,5])
 		    Rx_0.append(sites_info0[:,6])
@@ -1402,7 +1391,7 @@ class cybershk_nga:
 		    Rrup.append( tmp ) 
 		    tmp = interp( slon, slat, sites_info0[:,6], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
 		    Rx.append( tmp ) 
-		    
+
 		    tmp = np.zeros((Nh,self.Nloc))
 		    for ih in xrange( Nh ):
 			try: 
@@ -1413,10 +1402,10 @@ class cybershk_nga:
 				print Hkxs0[ik][ih,ista]
 			    raise ValueError
 		    Hkxs.append( tmp )
-		    
+
 		    if Debug and sigmas[isigma] == 0.0 and ik == 0 and Tkey == '3.00':
 			sid = self.sids[ik]
-			
+
 			debug_hkxs_pth1 = debug_hkxs_pth + '/%s'%sigma_str
 			debug_hkxs_pth0 = debug_hkxs_pth1 + '/%s'%sid
 			for f in [debug_hkxs_pth1, debug_hkxs_pth0,]:
@@ -1429,8 +1418,8 @@ class cybershk_nga:
 			    fid = open( hkxsFile, 'w' )
 			    for iloc in xrange(Nsta): 
 				fid.write( '%s %s %s\n'%(\
-					   slon[iloc], slat[iloc], \
-					   Hkxs0[ik][ih,iloc]))
+				    slon[iloc], slat[iloc], \
+				    Hkxs0[ik][ih,iloc]))
 			    fid.close()
 			# save interpolated
 			for ih in xrange(Nh):
@@ -1438,8 +1427,8 @@ class cybershk_nga:
 			    fid = open( hkxsFile, 'w' )
 			    for iloc in xrange(self.Nloc): 
 				fid.write( '%s %s %s\n'%(\
-					   self.slon1d[iloc], self.slat1d[iloc], \
-					   tmp[ih,iloc]))
+				    self.slon1d[iloc], self.slat1d[iloc], \
+				    tmp[ih,iloc]))
 			    fid.close()
 		    del( tmp )
 		Dkxs, Cks, Bs, A = im_decom2( Hkxs, self.Nloc, pdf_x0, pdf_k, pdf_s )
@@ -1447,7 +1436,7 @@ class cybershk_nga:
 		# 2.Decomposition of the reference model 
 		Ekxms0R, Hkxs0R = im_decom1(RefModel, pdf_m, pdf_x0, pdf_kf=None)   # first step (average out)
 		Dkxs0R, Cks0R, Bs0R, A0R = im_decom2( Hkxs0R, Nsta0, pdf_x0, pdf_k, pdf_s0 )
-		
+
 		# interpolation
 		HkxsR = [] 
 		fD0 = []; fD = []; IDP = []
@@ -1469,7 +1458,7 @@ class cybershk_nga:
 			# remove the mean of IDP
 			tmpIDP_fD[ih,:] = IDP0[ik][ih,:] - np.average( IDP0[ik], axis=0, weights=pdf_x0[ik] )
 		    fD0.append( coef_b * tmpIDP_fD )   # normalized directivity effects (zero mean over hypocenters) to compare with d factor
-		
+
 		    tmp = np.zeros((Nh,self.Nloc))
 		    tmpIDP = np.zeros((Nh,self.Nloc))
 		    tmpfD = np.zeros((Nh,self.Nloc))
@@ -1490,11 +1479,11 @@ class cybershk_nga:
 		DkxsN = []; CksN = []; BsN = []; AN = []
 		for inga in xrange( len(self.NGAmodel) ):
 		    nga = self.NGAmodel[inga]
-		   
+
 		    # interpolation of each NGA models
 		    Ekxms0N1, Hkxs0N1 = im_decom1(TargetModel[nga], pdf_m, pdf_x0, pdf_kf=None)   # first step (average out)
 		    Dkxs0N1, Cks0N1, Bs0N1, A0N1 = im_decom2( Hkxs0N1, Nsta0, pdf_x0, pdf_k, pdf_s0 )
-		    
+
 		    Ekxms0N.append( Ekxms0N1) 
 		    Dkxs0N.append( Dkxs0N1 ) 
 		    Cks0N.append( Cks0N1 ) 
@@ -1513,7 +1502,7 @@ class cybershk_nga:
 			    slat.append( meta[sites_run[i]]['lat'] )
 			slon = np.array( slon )
 			slat = np.array( slat )
-			
+
 			tmp = np.zeros((Nh,self.Nloc))
 			for ih in xrange( Nh ):
 			    tmp[ih,:] = interp( slon, slat, Hkxs0N1[ik][ih,:], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
@@ -1528,7 +1517,7 @@ class cybershk_nga:
 		end_time0 = HourMinSecToSec(BlockName='ABF analysis ends')
 		hour,min,sec = SecToHourMinSec(end_time0-start_time0,BlockName='ABF analysis')
 		print '='*30 + '\n'
-                	
+
 		# Before save, think about what do you need to show and make them easy to compute and plot (more general)
 		# Gkxmfs to get dimension and doing other operations
 		print '='*30
@@ -1537,7 +1526,7 @@ class cybershk_nga:
 
 		################################################## 
 		# Save un-interpolated metadata:
-                ################################################## 
+		################################################## 
 		SigmaS = '/%s'%sigma_str
 
 		# So Far
@@ -1551,10 +1540,10 @@ class cybershk_nga:
 		bs0_pth1   = bs0_pth   + SigmaS
 		a0_pth1    = a0_pth    + SigmaS
 		for f in [SFks0_pth1, SEks0_pth1, \
-			dkxs0_pth1, SDks0_pth1, cks0_pth1, bs0_pth1, a0_pth1, ]:
+		          dkxs0_pth1, SDks0_pth1, cks0_pth1, bs0_pth1, a0_pth1, ]:
 		    if not os.path.exists(f):
 			os.mkdir(f)
-		
+
 		if isigma == 0: 
 		    #    # for slip (m,f) related quantities, they don't really depends on hypocenter average except their averaged standard deviations
 		    fkxmfs0_pth1 = fkxmfs0_pth + SigmaS
@@ -1564,8 +1553,8 @@ class cybershk_nga:
 
 		#    SEkxs0_pth1 = SEkxs0_pth + SigmaS 
 		    for f in [fkxmfs0_pth1, ekxms0_pth1,]:
-	       		 if not os.path.exists(f):
-		            os.mkdir(f)
+			if not os.path.exists(f):
+			    os.mkdir(f)
 
 		# common information
 		Nk = len(Gkxmfs) 
@@ -1580,14 +1569,14 @@ class cybershk_nga:
 		    srcsh_fid.write('%s %s %s %s\n'%(sid,Nm,Nh,Nf))   # used later for standard deviation calculation
 		src_fid.close() 
 		srcsh_fid.close() 
-		
+
 		# a0 factor
 		fid_a = open( a0_pth1 + '/CyberShake.NGAs.%s.a'%(Tkey), 'w' )
 		#fid_a.write( '# %s %s %s %s %s %s\n'%( self.NGAmodel[0], self.NGAmodel[1], self.NGAmodel[2], self.NGAmodel[3], 'CyberShake', 'RefModel' ))
 		fid_a.write( '%s %s %s %s %s %s\n'%( A0-A0N[0],A0-A0N[1],A0-A0N[2],A0-A0N[3], A0, A0-A0R) )   
 		fid_a.close()
 
-                SFks0 = []; SEks0 = []
+		SFks0 = []; SEks0 = []
 		for ik in xrange( Nk ):
 		    sid = Sources[ik]
 		    dkxs0_pth0 = dkxs0_pth1 + '/%s'%sid
@@ -1596,7 +1585,7 @@ class cybershk_nga:
 		    for f in [SFks0_pth0,SEks0_pth0,dkxs0_pth0,]:
 			if not os.path.exists(f):
 			    os.mkdir(f)
-		    
+
 		    meta = sites_info[ik]
 		    sites_run = meta.keys()
 		    slon = []; slat = []
@@ -1605,18 +1594,18 @@ class cybershk_nga:
 			slat.append( meta[sites_run[i]]['lat'] )
 		    slon = np.array( slon )
 		    slat = np.array( slat )
-		    
+
 		    Mws, rids, Nrow, Ncol, rake, dip, ztor, zbom = rups_info[ik]
 		    Nm,Nh,Nf,Nsta = Gkxmfs[ik].shape
 		    if isigma == 0:
 			# F-map and E-map for only one sigma (isigma=0) 
 			fkxmfs0_pth0 = fkxmfs0_pth1 + '/%s'%sid 
 			ekxms0_pth0 = ekxms0_pth1 + '/%s'%sid 
-			
+
 			for f in [fkxmfs0_pth0, ekxms0_pth0,]:
 			    if not os.path.exists(f):
 				os.mkdir(f)
-			
+
 			srcmw_fid = open( ekxms0_pth0 + '/SourceRuptureMwInfo','w' )
 			for ir in xrange(Nm): 
 			    srcmw_fid.write( '%s\n'%(Mws[ir]) ) 
@@ -1637,15 +1626,15 @@ class cybershk_nga:
 				tmp1.append( Ekxms0[ik][ir, ih,:] - Ekxms0R[ik][ir, ih,:] )
 				for iloc in xrange(Nsta0): 
 				    fid.write( '%s %s %s %s %s %s %s %s\n'%(\
-					       slon[iloc], slat[iloc], \
-					       tmp1[0][iloc], \
-					       tmp1[1][iloc], \
-					       tmp1[2][iloc], \
-					       tmp1[3][iloc], \
-					       tmp1[4][iloc], \
-					       tmp1[5][iloc] )) 
+				        slon[iloc], slat[iloc], \
+				        tmp1[0][iloc], \
+				        tmp1[1][iloc], \
+				        tmp1[2][iloc], \
+				        tmp1[3][iloc], \
+				        tmp1[4][iloc], \
+				        tmp1[5][iloc] )) 
 				fid.close()
-				
+
 				# F-file
 				fkxmfs0_pth01 = fkxmfs0_pth00 + '/Hypocenter%s'%(ih) 
 				if not os.path.exists(fkxmfs0_pth01):
@@ -1656,7 +1645,7 @@ class cybershk_nga:
 				    for iloc in xrange(Nsta0): 
 					fid.write( '%s %s %s\n'%(slon[iloc], slat[iloc], Fkxmfs0[ik][ir,ih,islip,iloc]) )
 				    fid.close()
-		        srcmw_fid.close() 
+			srcmw_fid.close() 
 
 		    # Calculate standard deviation of F-Map based Fkxmfs0 (attention: variation here, not standard deviation)
 		    tmp_sd_xms = np.average( Fkxmfs0[ik]**2,axis=2, weights=pdf_f[ik] )
@@ -1666,10 +1655,10 @@ class cybershk_nga:
 		    fid = open( SFksFile, 'w' )
 		    for iloc in xrange(Nsta0): 
 			fid.write( '%s %s %s\n'%(\
-				       slon[iloc], slat[iloc],\
-				       tmp_sd[iloc] ))
+			    slon[iloc], slat[iloc],\
+			    tmp_sd[iloc] ))
 		    fid.close()
-		    
+
 		    # Calculate standard deviation of E-Map based Ekxms0 
 		    tmp_sd = [] 
 		    for inga in xrange(len(self.NGAmodel) ): 
@@ -1677,7 +1666,7 @@ class cybershk_nga:
 			tmp_sd_xs = np.average( (Ekxms0N[inga][ik])**2,axis=0, weights=pdf_m[ik] )
 			tmp = np.average( tmp_sd_xs, axis=0, weights = pdf_x0[ik] )
 			tmp_sd.append( tmp )
-		    
+
 		    # CyberShake
 		    tmp_sd_xs = np.average( Ekxms0[ik]**2,axis=0, weights=pdf_m[ik] )
 		    tmp = np.average( tmp_sd_xs, axis=0, weights = pdf_x0[ik] )
@@ -1689,18 +1678,18 @@ class cybershk_nga:
 		    tmp_sd_xs = np.average( (Ekxms0R[ik])**2,axis=0, weights=pdf_m[ik] )
 		    tmp = np.average( tmp_sd_xs, axis=0, weights = pdf_x0[ik] )
 		    tmp_sd.append( tmp )
-		    
+
 		    SEksFile = SEks0_pth0 + '/CyberShake.NGAs.%s.Source%s.Seks'%(Tkey, sid)
 		    fid = open( SEksFile, 'w' )
 		    for iloc in xrange(Nsta0): 
 			fid.write( '%s %s %s %s %s %s %s %s\n'%(\
-				       slon[iloc], slat[iloc],\
-				       tmp_sd[0][iloc] ,\
-				       tmp_sd[1][iloc] ,\
-				       tmp_sd[2][iloc] ,\
-				       tmp_sd[3][iloc] ,\
-				       tmp_sd[4][iloc] ,\
-				       tmp_sd[5][iloc] ))
+			    slon[iloc], slat[iloc],\
+			    tmp_sd[0][iloc] ,\
+			    tmp_sd[1][iloc] ,\
+			    tmp_sd[2][iloc] ,\
+			    tmp_sd[3][iloc] ,\
+			    tmp_sd[4][iloc] ,\
+			    tmp_sd[5][iloc] ))
 		    fid.close()
 
 		    # D-Map
@@ -1718,13 +1707,13 @@ class cybershk_nga:
 
 			for iloc in xrange(Nsta0): 
 			    fid.write( '%s %s %s %s %s %s %s %s %s %s\n'%(\
-				       slon[iloc], slat[iloc],IDP0[ik][ih,iloc], fD0[ik][ih,iloc], \
-				       tmp1[0][iloc], \
-				       tmp1[1][iloc], \
-				       tmp1[2][iloc], \
-				       tmp1[3][iloc], \
-				       tmp1[4][iloc], \
-				       tmp1[5][iloc] )) 
+			        slon[iloc], slat[iloc],IDP0[ik][ih,iloc], fD0[ik][ih,iloc], \
+			        tmp1[0][iloc], \
+			        tmp1[1][iloc], \
+			        tmp1[2][iloc], \
+			        tmp1[3][iloc], \
+			        tmp1[4][iloc], \
+			        tmp1[5][iloc] )) 
 			fid.close()
 		    tmp2 = np.array( tmp2 ) 
 
@@ -1734,15 +1723,15 @@ class cybershk_nga:
 		    fid = open( SDksFile, 'w' )
 		    for iloc in xrange(Nsta0): 
 			fid.write( '%s %s %s %s %s %s %s %s\n'%(\
-				       slon[iloc], slat[iloc], \
-				       tmp1[0][iloc], \
-				       tmp1[1][iloc], \
-				       tmp1[2][iloc], \
-				       tmp1[3][iloc], \
-				       tmp1[4][iloc], \
-				       tmp1[5][iloc] )) 
+			    slon[iloc], slat[iloc], \
+			    tmp1[0][iloc], \
+			    tmp1[1][iloc], \
+			    tmp1[2][iloc], \
+			    tmp1[3][iloc], \
+			    tmp1[4][iloc], \
+			    tmp1[5][iloc] )) 
 		    fid.close()
-		    
+
 		    # C-Map  (append the Distance information)
 		    tmp1 = []
 		    for inga in xrange( len(self.NGAmodel) ): 
@@ -1753,15 +1742,15 @@ class cybershk_nga:
 		    fid_cks = open( cksFile, 'w' )
 		    for iloc in xrange(Nsta0): 
 			fid_cks.write( '%s %s %s %s %s %s %s %s %s %s %s\n'%(\
-				       slon[iloc], slat[iloc], Rjb_0[ik][iloc], Rrup_0[ik][iloc], Rx_0[ik][iloc], \
-				       tmp1[0][iloc], \
-				       tmp1[1][iloc], \
-				       tmp1[2][iloc], \
-				       tmp1[3][iloc], \
-				       tmp1[4][iloc], \
-				       tmp1[5][iloc] )) 
+			    slon[iloc], slat[iloc], Rjb_0[ik][iloc], Rrup_0[ik][iloc], Rx_0[ik][iloc], \
+			    tmp1[0][iloc], \
+			    tmp1[1][iloc], \
+			    tmp1[2][iloc], \
+			    tmp1[3][iloc], \
+			    tmp1[4][iloc], \
+			    tmp1[5][iloc] )) 
 		    fid_cks.close()
-		    
+
 		# write into Basin maps and overall averaging values
 		tmp1 = []
 		for inga in xrange( len(self.NGAmodel) ): 
@@ -1772,20 +1761,20 @@ class cybershk_nga:
 		fid_bs = open( bsFile, 'w')
 		for iloc in xrange( Nsta0 ):
 		    fid_bs.write( '%s %s %s %s %s %s %s %s %s %s %s\n'%(\
-				       slon[iloc], slat[iloc], Vs30_0[iloc], Z10_0[iloc], Z25_0[iloc], \
-				       tmp1[0][iloc], \
-				       tmp1[1][iloc], \
-				       tmp1[2][iloc], \
-				       tmp1[3][iloc], \
-				       tmp1[4][iloc], \
-				       tmp1[5][iloc] )) 
+		        slon[iloc], slat[iloc], Vs30_0[iloc], Z10_0[iloc], Z25_0[iloc], \
+		        tmp1[0][iloc], \
+		        tmp1[1][iloc], \
+		        tmp1[2][iloc], \
+		        tmp1[3][iloc], \
+		        tmp1[4][iloc], \
+		        tmp1[5][iloc] )) 
 		fid_bs.close()
-		
+
 
 		################################################## 
 		# Save interpolated metadata:
-                ################################################## 
-		
+		################################################## 
+
 		# So Far
 		# Compute SFks, SEks, SDks and save them 
 		# save Dkxs, Cks, Bs, A
@@ -1797,7 +1786,7 @@ class cybershk_nga:
 		bs_pth1   = bs_pth   + SigmaS
 		a_pth1    = a_pth    + SigmaS
 		for f in [SFks_pth1, SEks_pth1, \
-			dkxs_pth1, SDks_pth1, cks_pth1, bs_pth1, a_pth1, ]:
+		          dkxs_pth1, SDks_pth1, cks_pth1, bs_pth1, a_pth1, ]:
 		    if not os.path.exists(f):
 			os.mkdir(f)
 
@@ -1827,20 +1816,20 @@ class cybershk_nga:
 		    for f in [SFks_pth0,SEks_pth0,dkxs_pth0,]:
 			if not os.path.exists(f):
 			    os.mkdir(f)
-		    
+
 		    Mws, rids, Nrow, Ncol, rake, dip, ztor, zbom = rups_info[ik]
 		    Nm,Nh,Nf,Nsta = Gkxmfs[ik].shape
-		    
+
 		    # Calculate standard deviation of F-Map based Fkxmfs0 and interpolate before save
 		    tmp_sd = interp( slon, slat, SFks0[ik][:Nsta0], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
 		    SFksFile = SFks_pth0 + '/CyberShake.NGAs.%s.Source%s.Sfks'%(Tkey, sid)
 		    fid = open( SFksFile, 'w' )
 		    for iloc in xrange(self.Nloc): 
 			fid.write( '%s %s %s\n'%(\
-				       self.slon1d[iloc], self.slat1d[iloc],\
-				       tmp_sd[iloc] ))
+			    self.slon1d[iloc], self.slat1d[iloc],\
+			    tmp_sd[iloc] ))
 		    fid.close()
-		    
+
 		    # Calculate standard deviation of E-Map based Ekxms0 
 		    tmp_sd = [] 
 		    for inga in xrange(len(self.NGAmodel) ): 
@@ -1850,18 +1839,18 @@ class cybershk_nga:
 		    tmp_sd.append( tmp )
 		    tmp = interp( slon, slat, SEks0[ik][5][:Nsta0], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
 		    tmp_sd.append( tmp )
-		    
+
 		    SEksFile = SEks_pth0 + '/CyberShake.NGAs.%s.Source%s.Seks'%(Tkey, sid)
 		    fid = open( SEksFile, 'w' )
 		    for iloc in xrange(self.Nloc): 
 			fid.write( '%s %s %s %s %s %s %s %s\n'%(\
-				       self.slon1d[iloc], self.slat1d[iloc],\
-				       tmp_sd[0][iloc] ,\
-				       tmp_sd[1][iloc] ,\
-				       tmp_sd[2][iloc] ,\
-				       tmp_sd[3][iloc] ,\
-				       tmp_sd[4][iloc] ,\
-				       tmp_sd[5][iloc] ))
+			    self.slon1d[iloc], self.slat1d[iloc],\
+			    tmp_sd[0][iloc] ,\
+			    tmp_sd[1][iloc] ,\
+			    tmp_sd[2][iloc] ,\
+			    tmp_sd[3][iloc] ,\
+			    tmp_sd[4][iloc] ,\
+			    tmp_sd[5][iloc] ))
 		    fid.close()
 
 		    # D-Map
@@ -1878,13 +1867,13 @@ class cybershk_nga:
 
 			for iloc in xrange(self.Nloc): 
 			    fid.write( '%s %s %s %s %s %s %s %s %s %s\n'%(\
-				       self.slon1d[iloc], self.slat1d[iloc],IDP[ik][ih,iloc], fD[ik][ih,iloc], \
-				       tmp1[0][iloc], \
-				       tmp1[1][iloc], \
-				       tmp1[2][iloc], \
-				       tmp1[3][iloc], \
-				       tmp1[4][iloc], \
-				       tmp1[5][iloc] )) 
+			        self.slon1d[iloc], self.slat1d[iloc],IDP[ik][ih,iloc], fD[ik][ih,iloc], \
+			        tmp1[0][iloc], \
+			        tmp1[1][iloc], \
+			        tmp1[2][iloc], \
+			        tmp1[3][iloc], \
+			        tmp1[4][iloc], \
+			        tmp1[5][iloc] )) 
 			fid.close()
 		    tmp2 = np.array( tmp2 ) 
 
@@ -1894,15 +1883,15 @@ class cybershk_nga:
 		    fid = open( SDksFile, 'w' )
 		    for iloc in xrange(self.Nloc): 
 			fid.write( '%s %s %s %s %s %s %s %s\n'%(\
-				       self.slon1d[iloc], self.slat1d[iloc], \
-				       tmp1[0][iloc], \
-				       tmp1[1][iloc], \
-				       tmp1[2][iloc], \
-				       tmp1[3][iloc], \
-				       tmp1[4][iloc], \
-				       tmp1[5][iloc] )) 
+			    self.slon1d[iloc], self.slat1d[iloc], \
+			    tmp1[0][iloc], \
+			    tmp1[1][iloc], \
+			    tmp1[2][iloc], \
+			    tmp1[3][iloc], \
+			    tmp1[4][iloc], \
+			    tmp1[5][iloc] )) 
 		    fid.close()
-		    
+
 		    # C-Map  (append the Distance information)
 		    tmp1 = []
 		    for inga in xrange( len(self.NGAmodel) ): 
@@ -1913,16 +1902,16 @@ class cybershk_nga:
 		    fid_cks = open( cksFile, 'w' )
 		    for iloc in xrange(self.Nloc): 
 			fid_cks.write( '%s %s %s %s %s %s %s %s %s %s %s\n'%(\
-				       self.slon1d[iloc], self.slat1d[iloc], \
-				       Rjb[ik][iloc], Rrup[ik][iloc], Rx[ik][iloc], \
-				       tmp1[0][iloc], \
-				       tmp1[1][iloc], \
-				       tmp1[2][iloc], \
-				       tmp1[3][iloc], \
-				       tmp1[4][iloc], \
-				       tmp1[5][iloc] )) 
+			    self.slon1d[iloc], self.slat1d[iloc], \
+			    Rjb[ik][iloc], Rrup[ik][iloc], Rx[ik][iloc], \
+			    tmp1[0][iloc], \
+			    tmp1[1][iloc], \
+			    tmp1[2][iloc], \
+			    tmp1[3][iloc], \
+			    tmp1[4][iloc], \
+			    tmp1[5][iloc] )) 
 		    fid_cks.close()
-		    
+
 		# write into Basin maps and overall averaging values
 		tmp1 = []
 		for inga in xrange( len(self.NGAmodel) ): 
@@ -1933,20 +1922,20 @@ class cybershk_nga:
 		fid_bs = open( bsFile, 'w')
 		for iloc in xrange( self.Nloc ):
 		    fid_bs.write( '%s %s %s %s %s %s %s %s %s %s %s\n'%(\
-				       self.slon1d[iloc], self.slat1d[iloc], Vs30[iloc], Z10[iloc], Z25[iloc], \
-				       tmp1[0][iloc], \
-				       tmp1[1][iloc], \
-				       tmp1[2][iloc], \
-				       tmp1[3][iloc], \
-				       tmp1[4][iloc], \
-				       tmp1[5][iloc] )) 
+		        self.slon1d[iloc], self.slat1d[iloc], Vs30[iloc], Z10[iloc], Z25[iloc], \
+		        tmp1[0][iloc], \
+		        tmp1[1][iloc], \
+		        tmp1[2][iloc], \
+		        tmp1[3][iloc], \
+		        tmp1[4][iloc], \
+		        tmp1[5][iloc] )) 
 		fid_bs.close()
 
 		print '='*30
 		end_time0 = HourMinSecToSec(BlockName='ABF results saving ends')
 		hour,min,sec = SecToHourMinSec(end_time0-start_time0,BlockName='ABF saving')
 		print '='*30 + '\n'
-		
+
 
 
 
@@ -1958,39 +1947,39 @@ class cybershk_nga:
     # Update model coefficients in NGA models (basin term, directivity)
     # need to be modified
     def HkxsAnalysis(self, CyberShakeRvar, sites_info, rups_info, Sources, ngaP0k=None, ngaD0k=None, \
-		     hypoPDF= {'CyberShake':{'gaussian':0.6}, 'CB':1, 'BA':1, 'CY':1, 'AS':1}, \
-	             NGAmodel='AS', opt='Bs', coefkey='a10'):
+                     hypoPDF= {'CyberShake':{'gaussian':0.6}, 'CB':1, 'BA':1, 'CY':1, 'AS':1}, \
+                     NGAmodel='AS', opt='Bs', coefkey='a10'):
 
 	# Regression
 	# NGAmodel: 
 	# opt: 
 	# NewCoefs (just key)
 
-        # PATH info
+	# PATH info
 	Gkxmfs_pth= self.output_pth+'/GkxmfsDmap'      # path to save directivity analysis results (weighting functions)
 	metapth = Gkxmfs_pth + '/Metadata' 
 
-        # map file save pth
+	# map file save pth
 	dkxs_pth = Gkxmfs_pth + '/Dkxs' 
 	SDks_pth = Gkxmfs_pth + '/SDks' 
 	cks_pth = Gkxmfs_pth + '/Cks' 
 	SCk_pth = Gkxmfs_pth + '/SCk' 
 	bs_pth = Gkxmfs_pth + '/Bs'
 
-        # plotpth (local plot, not map plots)
+	# plotpth (local plot, not map plots)
 	plotpth0 = self.flatfile_plot_pth00 + '/Gkxmfs'
 	plotpth = plotpth0 + '/' + opt
 	pfmt = 'eps'
-		    
+
 	for f in [Gkxmfs_pth, metapth, \
-		bs_pth, dkxs_pth, SDks_pth, \
-		plotpth0, plotpth, ]:
+	          bs_pth, dkxs_pth, SDks_pth, \
+	          plotpth0, plotpth, ]:
 	    if not os.path.exists(f):
 		os.mkdir(f)
 
 	Nk = len( CyberShakeRvar )
 
-        # prepare flatfile  (just once!)
+	# prepare flatfile  (just once!)
 	D_flat = []; sites_flat = []
 	for ik in xrange( Nk ):
 	    sid = Sources[ik] 
@@ -2002,23 +1991,23 @@ class cybershk_nga:
 	    # loop over periods (it could be one period)
 	    Tkey = '%.2f'%Ti
 	    print 'Analysis at periods = %s sec'%(Tkey)
-	    
+
 	    # source dependent (list)
 	    Gkxmfs = []
 	    pdf_f = []; pdf_m = []; Nhs = []
 	    for ik in xrange( Nk ):
-		
+
 		Nm = len( CyberShakeRvar[ik] )
 		tmpCS = []
 		for irup in xrange( Nm ):
 		    tmpCS.append( np.log( CyberShakeRvar[ik][irup][Tkey] ) )   # [irup][ih,islip,ista]
 		tmp_CS = np.array( tmpCS )
-	        Nm,Nh,Nf,Nsta = tmp_CS.shape
+		Nm,Nh,Nf,Nsta = tmp_CS.shape
 		Nhs.append( Nh )
 
 		Gkxmfs.append( tmp_CS )
 		del(tmpCS)
-		
+
 		# set up weighting functions for slip-distribution and stress drop
 		pdf_f.append([])
 		pdf_m.append([])
@@ -2028,11 +2017,11 @@ class cybershk_nga:
 		AreaTmp = Nrow*Ncol  # in km
 		mu = 3.87 + np.log10(AreaTmp) * 1.05   # somerville 2006 M-A relationship
 		std = 0.2
-		
+
 		prob0 = 1./(np.sqrt(2.*np.pi)*std) * np.exp(-0.5*((Mws-mu)/std)**2)
 		pdf_m[ik] = prob0 / sum(prob0)    # weighting should be summed up to 1
 		pdf_m[ik] = pdf_m[ik].tolist()
-		
+
 		# slip distribution (just use uniform distribution)
 		for ivar in xrange( Nf ):
 		    pdf_f[ik].append( 1./Nf ) 
@@ -2040,7 +2029,7 @@ class cybershk_nga:
 	    # weighting functions for source and sites
 	    pdf_k = np.ones(Nk)/Nk
 	    pdf_s = np.ones(self.Nloc)/self.Nloc
-		
+
 	    # hypocenter location distributions:
 	    keytmp = hypoPDF['CyberShake'].keys()[0]
 	    pdf_x = []; Nsigma = 1
@@ -2062,7 +2051,7 @@ class cybershk_nga:
 		    prob0 = np.exp(-0.5*((xh-mu)/sigma)**2)   # normalized Gaussian distribution
 		    pdf_x0 = (prob0/sum(prob0)).tolist()    # to make sure sum(prob) = 1
 		    pdf_x[isigma].append( pdf_x0 )
-            
+
 	    # use NGA-derived parameters (default) (to prepare for later usage)
 	    # model dependent (dict) or just two models (you can use list)
 	    IDPk = []
@@ -2071,7 +2060,7 @@ class cybershk_nga:
 		Nm, Nh, Nf, Nsta = Gkxmfs[ik].shape
 		tmpG = np.zeros( (Nm,Nh,Nf,Nsta) )
 		sid = Sources[ik] 
-		
+
 		if ngaP0k == None:
 		    ngaP = self.nga_Py( sid, rups_info[ik], sites_info[ik], sites_flat=sites_flat[ik], Ts = [Ti,], model_name = NGAmodel )
 		    if opt == 'Dkxs': 
@@ -2094,7 +2083,7 @@ class cybershk_nga:
 		    slat.append( meta[sites_run[i]]['lat'] )
 		slon = np.array( slon )
 		slat = np.array( slat )
-		
+
 		if ik == 0:
 		    # interpolate the site info (Vs30, Z2.5, Z1.0)
 		    sites_info0 = self.sites_flatfile( Sources[ik], sites_info[ik] )    # Vs30 and Z1.0, Z2.5 (uninterpolated results)
@@ -2102,18 +2091,18 @@ class cybershk_nga:
 		    Z25 = interp( slon, slat, sites_info0[:,2], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
 		    Z10 = interp( slon, slat, sites_info0[:,3], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
 
-            if ngaP0k != None: 
+	    if ngaP0k != None: 
 		ngaPk = ngaP0k[nga]
-            if ngaD0k != None: 
+	    if ngaD0k != None: 
 		ngaDk = ngaD0k[nga] 
-	
+
 	    # =========================================================
 	    # the above will be all the same for different opts (Bs,Dkxs, or Cks)
 	    # =========================================================
 	    if opt == 'Bs': 
 		NGAdict = self.NGAs
 		NGAdict[NGAmodel]['NewCoefs'] = {}   # the default of NewCoefs == None
-		
+
 		# Generate new parameters
 		if NGAmodel == 'AS': 
 		    # generate grid search values around NGA values
@@ -2124,14 +2113,14 @@ class cybershk_nga:
 		    coef00 = coef0
 		    dtmp = abs(coef0 * dprm)
 		    coefs = np.arange( -Nside*dtmp, Nside*dtmp+dtmp, dtmp ) + coef0
-		    
+
 		# Loop over possible parameters (given by the opt dictionary)
 		sigmaB = []; sigmaBmin = 10000 
 		for item in xrange( len(coefs) ):
-		    
+
 		    # use the updated coefficients:
 		    NGAdict[NGAmodel]['NewCoefs'][coefkey] = coefs[item]
-		    
+
 		    # recompute ngaPy and ngaD
 		    Hkxs = []
 		    for ik in xrange( Nk ):
@@ -2139,14 +2128,14 @@ class cybershk_nga:
 			tmpG = np.zeros( (Nm,Nh,Nf,Nsta) )
 			sid = Sources[ik] 
 			ngaP = self.nga_Py( sid, rups_info[ik], sites_info[ik], Ts = [Ti,], model_name = NGAmodel,NGAdict=NGAdict )
-			
+
 			for ir in xrange( Nm ):
 			    for ista in xrange( Nsta ):
 				for ih in xrange( Nh ): 
 				    tmpG[ir,ih,:,ista] = Gkxmfs[ik][ir,ih,:,ista] - np.log( ngaP[Tkey][ir][0][ista] ) - np.log( np.array(ngaDk[ik][Tkey][ir])[ih,ista] )
 			tmp_xms = np.average( tmpG, axis=2, weights = pdf_f[ik] )
 			Hkxs0 = np.average( tmp_xms, axis=0, weights=pdf_m[ik] )
-			
+
 			# sites
 			meta = sites_info[ik]
 			sites_run = meta.keys()
@@ -2161,7 +2150,7 @@ class cybershk_nga:
 			for ih in xrange( Nh ):
 			    tmp[ih,:] = interp( slon, slat, Hkxs0[ih,:], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
 			Hkxs.append( tmp ) 
-			
+
 		    del( tmpG )
 
 		    # we have TargetModel as (residual) that has shape: [Nk][Nm,Nh,Nf,Nsta]
@@ -2173,7 +2162,7 @@ class cybershk_nga:
 			coef0 = coefs[item]
 			bs0 = bs
 		    sigmaB.append( sigmaB0 )
-	
+
 		# plot different parameters and sigmaB
 		fig = plt.figure(1) 
 		fig.clf()
@@ -2184,7 +2173,7 @@ class cybershk_nga:
 		ax.set_ylabel( r'$\sigma_b$' )
 		ax.set_title( 'NGA model: %s, period: %s sec, original a10 = %s '%(NGAmodel, '%.2f'%Ti, coef00) )
 		ax.text( coef0, max(sigmaB)*0.5, '(%s,%s)'%('%.4f'%coef0,'%.4f'%sigmaBmin) )   # mark the minimum value 
-		
+
 		fig.savefig( plotpth + '/Model%s.SigmaB_%s_%s.pdf'%(NGAmodel, '%.2f'%Ti, coefkey), format='pdf')
 		fig.savefig( plotpth + '/Model%s.SigmaB_%s_%s.%s'%(NGAmodel, '%.2f'%Ti, coefkey, pfmt), format=pfmt, dpi=300 )
 
@@ -2193,21 +2182,21 @@ class cybershk_nga:
 		fid_bs = open( bsFile, 'w')
 		for iloc in xrange( self.Nloc ):
 		    fid_bs.write( '%s %s %s %s %s %s\n'%(\
-				   self.slon1d[iloc], self.slat1d[iloc], \
-				   Vs30[iloc], Z10[iloc], Z25[iloc], \
-				   bs0[iloc]))    # write the minimun sigmaB for basin plots
+		        self.slon1d[iloc], self.slat1d[iloc], \
+		        Vs30[iloc], Z10[iloc], Z25[iloc], \
+		        bs0[iloc]))    # write the minimun sigmaB for basin plots
 		fid_bs.close()
-    
-                # write into metafile 
+
+		# write into metafile 
 		metafile = metapth + '/CyberShake.%s.%s.%s.T%s.py'%(NGAmodel, opt, coefkey, '%.2f'%Ti) 
 		meta = dict( 
-			coefs = coefs.tolist(), 
-		        SigmaS = sigmaB, 
-			)
+		    coefs = coefs.tolist(), 
+		    SigmaS = sigmaB, 
+		)
 		save( metafile, meta, header='#metafile for minimize %s by grid searching coeficient %s in %s\n'%(opt, coefkey, NGAmodel) )
 
 		return coef0 
-	    
+
 	    if opt == 'Dkxs': 
 		# ==================================================
 		# find corresponding parameters to miniminze sigmaD 
@@ -2215,16 +2204,16 @@ class cybershk_nga:
 		dict1 = self.NGAs
 		dict1['SC']['NewCoefs'][NGAmodel] = {}   # the default of NewCoefs == None
 		cuteps = dict1['SC']['predictors']['cuteps']
-		
+
 		# generate grid search values around NGA values
 		SC08 = SC08_model(NGAmodel+'08',cuteps = cuteps)
 		Nside = 5
 		coef0 = SC08.Coefs[Tkey][coefkey]
 		dtmp = 0.2
 		coefs = np.arange( -Nside*dtmp, Nside*dtmp+dtmp, dtmp ) + coef0
-		
+
 		coef00 = coef0   # original b
-		 
+
 		# Loop over possible parameters (given by the opt dictionary)
 		dkxsDmin = []; SdksDmin = []
 		sigmaDmin = []
@@ -2236,13 +2225,13 @@ class cybershk_nga:
 		    sigmaDkey = '%s'%'%.2f'%sigmas[isigma]
 		    sigmaD = []; sigmaD0min = 10000 
 		    for item in xrange( len(coefs) ):
-			
+
 
 			#print 'deal with coef %s'%item 
 
 			# use the updated coefficients:
 			#dict1['SC']['NewCoefs'][NGAmodel][coefkey] = coefs[item]
-			
+
 			a = SC08.Coefs[Tkey]['a']    # keep other parameters (period dependent)
 			b = coefs[item]    # b is changed
 			a0 = SC08.Coefs[Tkey]['a0']    
@@ -2256,7 +2245,7 @@ class cybershk_nga:
 			    sid = Sources[ik] 
 			    Mws = rups_info[ik][0]
 			    #print 'compute directivity for source %s'%sid
-			    
+
 			    # computing time consuming:
 			    #ngaD = self.directivity_SC08(sid, Mws, Nh, sites_info[ik], D_flat=D_flat[ik], Ts = [Ti,], model_name = NGAmodel, NGAdict = dict1)
 			    for ir in xrange( Nm ):
@@ -2292,10 +2281,10 @@ class cybershk_nga:
 				dkxs.append( tmp )
 				Sdks00 = np.average( tmp**2, axis=0, weights=pdf_x[isigma][ik] ) 
 				Sdks0.append( Sdks00 )
-				
+
 				Sdk0 = np.average( Sdks00, axis=0, weights=np.ones(Nsta)/Nsta )
 				Sdk.append( Sdk0 )
-			    
+
 			del( tmpG )
 			if 1:
 			    dkxs, Sdks, cks, cdks, bs, a000 = im_decom2( Hkxs, self.Nloc, pdf_x[isigma], pdf_k, pdf_s )
@@ -2303,7 +2292,7 @@ class cybershk_nga:
 			    sigmaD0 = np.average( np.average( Sdks**2, axis=0, weights = pdf_k ), axis=0, weights=pdf_s ) 
 			else:
 			    sigmaD0 = sum(Sdk) / Nk   # average over all Sources
-			
+
 			if sigmaD0 <= sigmaD0min: 
 			    sigmaD0min = sigmaD0
 			    coef0 = coefs[item]
@@ -2312,9 +2301,9 @@ class cybershk_nga:
 				Sdks2 = Sdks
 			sigmaD.append( sigmaD0 )
 
-	            sigmaDmin.append( sigmaD0min )  
+		    sigmaDmin.append( sigmaD0min )  
 		    sigmaS_D[sigmaDkey] = sigmaD 
-		    
+
 		    if 1:
 			dkxsDmin.append( dkxs0 )
 			SdksDmin.append( Sdks2 )
@@ -2335,7 +2324,7 @@ class cybershk_nga:
 			    for ih in xrange( Nh ):
 				tmp[ih,:] = interp( slon, slat, dkxs0[ik][ih,:], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
 			    dkxs1.append( tmp ) 
-			    
+
 			    # you can compute Sdks directly from the interpolated dkxs or you can interpolate Sdks0 !
 			    tmp1 = np.average( tmp**2, axis=0, weights = pdf_x[isigma][ik] )
 			    #tmp = interp( slon, slat, np.sqrt(Sdks0[ik]), self.slon1d, self.slat1d, eps=self.eps, method=self.method )
@@ -2350,7 +2339,7 @@ class cybershk_nga:
 		    lines.append( line0 )
 		    sigmaStr.append( r'$\gamma = %.3f$'%sigmas[isigma] )
 		    ax.plot( coef0, sigmaD0min, 'k*' )
-		
+
 		lg = ax.legend( lines, sigmaStr, loc=0 )
 		lg.draw_frame(False) 
 
@@ -2365,18 +2354,18 @@ class cybershk_nga:
 		index = (np.array(sigmaDmin) == min( sigmaDmin )).nonzero()[0]   # find the index and corresponding half width
 		sigmaGlobal = sigmas[index] 
 
-                # D-map (write)
+		# D-map (write)
 		srcsh_fid = open( Gkxmfs_pth + '/SourceRuptureHypoInfo','w' )
 		for ik in xrange( Nk ):
 		    sid = Sources[ik]
 		    Nh = dkxs0[ik].shape[0]
-		    
+
 		    Mws, Nrow, Ncol, rake, dip, ztor, zbom = rups_info[ik]
 		    Nm = len(Mws) 
-		    
+
 		    # source info
 		    srcsh_fid.write('%s %s %s\n'%(sid,Nm,Nh))
-		    
+
 		    dkxs_pth0 = dkxs_pth + '/%s'%sid
 		    for f in [dkxs_pth0,]:
 			if not os.path.exists(f):
@@ -2391,10 +2380,10 @@ class cybershk_nga:
 				str0 = str0 + ' %s'%(dkxsDmin[isigma][ik][ih,iloc])
 				str1 = str1 + ' %s'%(pdf_x0 * dkxsDmin[isigma][ik][ih,iloc])
 			    fid.write( '%s %s%s%s\n'%(\
-				       self.slon1d[iloc], self.slat1d[iloc],\
-				       str0, str1 ))
+			        self.slon1d[iloc], self.slat1d[iloc],\
+			        str0, str1 ))
 			fid.close()
-			
+
 		    # Variance of D-Map
 		    SDksFile = SDks_pth + '/CyberShake.%s.%s.Source%s.Sdks'%(NGAmodel, Tkey, sid)
 		    fid = open( SDksFile, 'w' )
@@ -2403,17 +2392,17 @@ class cybershk_nga:
 			for isigma in xrange( Nsigma ):
 			    str0 = str0 + ' %s'%(SdksDmin[isigma][ik][iloc])
 			fid.write( '%s %s%s\n'%(\
-				       self.slon1d[iloc], self.slat1d[iloc],str0) )
+			    self.slon1d[iloc], self.slat1d[iloc],str0) )
 		    fid.close()
-                
+
 		srcsh_fid.close() 
-                
+
 		# write into metafile 
 		metafile = metapth + '/CyberShake.%s.%s.%s.T%s.py'%(NGAmodel, opt, coefkey, '%.2f'%Ti) 
 		meta = dict( 
-			coefs = coefs.tolist(), 
-		        SigmaS = sigmaS_D,
-			)
+		    coefs = coefs.tolist(), 
+		    SigmaS = sigmaS_D,
+		)
 		save( metafile, meta, header='# metafile for minimize %s by grid searching coeficient %s in %s\n'%(opt, coefkey, NGAmodel) )
 
 		return coef0, sigmaGlobal
@@ -2439,7 +2428,7 @@ class cybershk_nga:
 		if Ref == self.NGAmodel[inga]:
 		    iref = inga
 		    break
-	
+
 	Np = len(self.periods) 
 	if Np == 1:
 	    Tstr='%.2f'%self.periods[0]
@@ -2448,12 +2437,12 @@ class cybershk_nga:
 
 	#Gkxmfs_pth=self.output_pth+'/Gkxmfs0'      # path to save the interpolated results
 	Gkxmfs_pth=self.output_pth+'/Gkxmfs'      # path to save the interpolated results
-        cks_pth = Gkxmfs_pth + '/Cks/'+sigmakey
+	cks_pth = Gkxmfs_pth + '/Cks/'+sigmakey
 	a_pth = Gkxmfs_pth + '/A/'+sigmakey
-	
+
 	src_info = Gkxmfs_pth + '/SourceInfo'
-        src_info = np.loadtxt( src_info ) 
-	
+	src_info = np.loadtxt( src_info ) 
+
 	# loop over all periods
 	e0 = []; ak = []
 	for ip in xrange( Np ):
@@ -2468,13 +2457,13 @@ class cybershk_nga:
 		cksFile = cks_pth + '/CyberShake.NGAs.%s.Source%s.cks'%(Tkey, sid)
 		tmp = np.loadtxt( cksFile,usecols=(2,3,4,5,6,7) ) 
 		tmp_ak.append( np.r_[src_info[ik], np.mean(tmp,0)] ) 
-            tmp_ak = np.array( tmp_ak )
+	    tmp_ak = np.array( tmp_ak )
 
 	    try: 
 		n1,n2 = tmp_ak.shape
 	    except: 
 		tmp_ak = tmp_ak.reshape( 1, len(tmp_ak) )
-	
+
 	    tmp_e0[:-2] = tmp_e0[-2] - tmp_e0[:-2]   # NGA models
 	    tmp_e0[-1] = tmp_e0[-2] - tmp_e0[-1]   # Ref model 
 	    for ik in xrange( len(tmp_ak) ):
@@ -2484,14 +2473,14 @@ class cybershk_nga:
 		tmp_e0[:-1] = tmp_e0[:-1] - tmp_e0[iref]    # including CyberShake as the target model
 		for ik in xrange( len( tmp_ak ) ):
 		    tmp_ak[ik,2:-1] = tmp_ak[ik,2:-1]-tmp_ak[ik,iref+2]
-            if iref == 4: 
+	    if iref == 4: 
 		tmp_e0[:-1] = tmp_e0[iref] - tmp_e0[:-1]    # including CyberShake as the target model
 		for ik in xrange( len( tmp_ak ) ):
 		    tmp_ak[ik,2:-1] = tmp_ak[ik,iref+2] - tmp_ak[ik,2:-1]
 
 	    e0.append( tmp_e0 )
 	    ak.append( tmp_ak )
-	
+
 	e0 = np.array( e0 )
 	ak = np.array( ak )
 
@@ -2502,7 +2491,7 @@ class cybershk_nga:
 	for f in [plotpth0, plotpth, plotpth1]:
 	    if not os.path.exists( f ):
 		os.mkdir( f )
-	
+
 	plotpth0 = plotpth0 + '/' + sigmakey
 	plotpth = plotpth + '/' + sigmakey
 	plotpth1 = plotpth1 + '/' + sigmakey
@@ -2554,21 +2543,21 @@ class cybershk_nga:
 	ax.set_ylim([0.005,0.1])
 	ax1.set_ylim([0.005,0.1])
 	ax.set_xlim([1.8, 11.])
-        ax.grid(True)
-        #ax.set_ylabel('ln A')
+	ax.grid(True)
+	#ax.set_ylabel('ln A')
 	from matplotlib.ticker import LogLocator, FormatStrFormatter 
 	minorLocator = LogLocator(subs = np.linspace(2,10,8,endpoint=False))
 	ax.xaxis.set_minor_locator( minorLocator) 
 	ax.grid(b=True,which='minor') 
 	ax.yaxis.set_ticks_position('right')
-	
+
 	if 1:
 	    subs = [-3, -4, -5]
 	    majorLocator = LogLocator(subs = np.exp(subs) )
 	    majorFormatter = FormatStrFormatter('$e^{%.2f}$')
 	    ax1.yaxis.set_major_locator( majorLocator )
 	    ax1.yaxis.set_major_formatter(majorFormatter) 
-            ax1.yaxis.set_ticks_position('left')
+	    ax1.yaxis.set_ticks_position('left')
 
 	ax.set_xlabel('Period (s)')
 	#if Ref == 'NoRef':
@@ -2579,7 +2568,7 @@ class cybershk_nga:
 	# save fig 
 	fig1.savefig( plotpth1+ '/E0_ref%s.%s'%(Ref,pfmt), format=pfmt,dpi=600)
 
-        # ak
+	# ak
 	fig2 = plt.figure(2,(14,10))
 	xt = np.arange( ak.shape[1] )
 	Nk = len(xt)
@@ -2587,14 +2576,14 @@ class cybershk_nga:
 	# sort sid by the Area
 	Area0, Sid0, index = sorti( ak[0,:,1], list1=ak[0,:,0] )
 	xtlab = np.array(Sid0,'i4') 
-	
+
 	fig2.clf()
 	for ip in xrange( Np ):
 	    ax = fig2.add_subplot( Np, 1, ip+1 )
 	    for imodel in xrange( 5 ):
 		Area0, ak0, index = sorti( ak[0,:,1], list1=ak[ip,:,imodel+2] )
 		ax.plot( Area0, ak0, color=clr[imodel], marker=smb[imodel], label=lgnames[imodel] )
-	    
+
 	    ax.set_xlim([0, 15000])
 	    ax.set_ylim([-1,1])
 	    ax.text( 10, 0.8, 'T=%s'%('%.2f'%self.periods[ip]), ha='left', va='top' )
@@ -2610,7 +2599,7 @@ class cybershk_nga:
 	    else:
 		ax.set_xticks([])
 	    ax.set_ylabel( 'fk (ln)' )
-	
+
 	# save fig 
 	fig2.savefig( plotpth + '/Ak_%s.ref%s.%s'%(Tstr, Ref,pfmt), format=pfmt)
 
@@ -2628,18 +2617,18 @@ class cybershk_nga:
 	    if not os.path.exists( f ):
 		os.mkdir( f )
 	pfmt = 'eps'
-	
+
 	Np = len(self.periods) 
 	if Np == 1:
 	    Tstr='%.2f'%self.periods[0]
 	else:
 	    Tstr='periods'
-	
+
 	for ip in xrange( Np ):
 	    period = self.periods[ip] 
 	    Tkey = '%.2f'%period 
 	    Binput = np.loadtxt( bs_pth + '/CyberShake.NGAs.%s.bs'%('%.2f'%period) )
-	    
+
 	    # these could be read in from velocity models (...)
 	    Vs30 = Binput[:,2]
 	    Z10 = Binput[:,3]
@@ -2675,10 +2664,10 @@ class cybershk_nga:
 		ax.set_ylabel( r'$\rho$' )
 		xticknames = plt.setp(ax,xticklabels=xtlab)
 		plt.setp(xticknames, rotation=0, fontsize=10)
-	    
+
 	    plotnam = '/BasinDepthCorrBs.NGAs.CyberShake.%s.%s'%(Tkey,pfmt)
 	    fig.savefig( plotpth + plotnam, format = pfmt,dpi=300 )
-            
+
 	    if PlotAll:
 		rs_Z10 = []; rs_Z25 = []
 		fig.clf()
@@ -2696,10 +2685,10 @@ class cybershk_nga:
 			    bstmp = np.array(bstmp)[index]
 			    Ztmp = np.array(Ztmp)[index]
 			    rho.append(np.corrcoef( bstmp, Ztmp )[0,1])
-			
+
 			rs_Z10[inga].append( rho[0] )
 			rs_Z25[inga].append( rho[1] )
-		    
+
 		    ax = fig.add_subplot( 2,2,inga+1 )
 		    ax.plot( Z10, rs_Z10[inga], 'rx', Z25*1000, rs_Z25[inga], 'b+' )
 		    ax.set_title(self.NGAmodel[inga])
@@ -2710,20 +2699,20 @@ class cybershk_nga:
 		    lg = ax.legend( ('Z1.0','Z2.5'), loc=0 )
 		    lg.draw_frame(False)
 		fig.savefig( plotpth + '/BasinDepthCorrBsAll.NGAs.CyberShake.%s.%s'%(Tkey,pfmt) )
-	    
+
 		bsFile = bs_pth + '/CyberShake.NGAs.%s.rsZ10'%(Tkey)
 		fid_bs = open( bsFile, 'w')
 		bsFile1 = bs_pth + '/CyberShake.NGAs.%s.rsZ25'%(Tkey)
 		fid_bs1 = open( bsFile1, 'w')
 		for iloc in xrange( self.Nloc ):
 		    fid_bs.write( '%s %s %s %s %s %s %s %s %s %s\n'%(\
-				   self.slon1d[iloc], self.slat1d[iloc], \
-				   Vs30[iloc], Z10[iloc], Z25[iloc], \
-				   rs_Z10[0][iloc],rs_Z10[1][iloc],rs_Z10[2][iloc], rs_Z10[3][iloc], Bs[iloc] ) )
+		        self.slon1d[iloc], self.slat1d[iloc], \
+		        Vs30[iloc], Z10[iloc], Z25[iloc], \
+		        rs_Z10[0][iloc],rs_Z10[1][iloc],rs_Z10[2][iloc], rs_Z10[3][iloc], Bs[iloc] ) )
 		    fid_bs1.write( '%s %s %s %s %s %s %s %s %s %s\n'%(\
-				   self.slon1d[iloc], self.slat1d[iloc], \
-				   Vs30[iloc], Z10[iloc], Z25[iloc], \
-				   rs_Z25[0][iloc],rs_Z25[1][iloc],rs_Z25[2][iloc], rs_Z25[3][iloc], Bs[iloc] ) )
+		        self.slon1d[iloc], self.slat1d[iloc], \
+		        Vs30[iloc], Z10[iloc], Z25[iloc], \
+		        rs_Z25[0][iloc],rs_Z25[1][iloc],rs_Z25[2][iloc], rs_Z25[3][iloc], Bs[iloc] ) )
 		fid_bs.close()
 		fid_bs1.close()
 
@@ -2733,25 +2722,25 @@ class cybershk_nga:
 	""" 
 	RMS analysis of each factors (d,c,b)
 	"""
-	
+
 	# paths
 	Gkxmfs_pth= self.output_pth+'/Gkxmfs'      # path to save directivity analysis results (weighting functions)
 
-        # map file save pth
+	# map file save pth
 	dkxs_pth = Gkxmfs_pth + '/Dkxs' 
 	cks_pth = Gkxmfs_pth + '/Cks' 
-        bs_pth = Gkxmfs_pth + '/Bs'
+	bs_pth = Gkxmfs_pth + '/Bs'
 
 	plotpth0 = self.flatfile_plot_pth00 + '/Gkxmfs'
 	plotpth = plotpth0 + '/' + opt
 	pfmt = 'eps'
-		    
+
 	for f in [Gkxmfs_pth, \
-		cks_pth, dkxs_pth, bs_pth, \
-		plotpth0, plotpth, ]:
+	          cks_pth, dkxs_pth, bs_pth, \
+	          plotpth0, plotpth, ]:
 	    if not os.path.exists(f):
 		os.mkdir(f)
-        
+
 	if wt: 
 	    weighted='weighted'
 	else: 
@@ -2763,23 +2752,23 @@ class cybershk_nga:
 	    if refmodel == self.NGAmodel[i]: 
 		iref = i
 		break 
-        if refmodel == 'CyberShake': 
+	if refmodel == 'CyberShake': 
 	    iref = 4 
 
-        try: 
+	try: 
 	    Nsigma = len(sigmas) 
 	except: 
 	    sigams = [sigmas,]
 	    Nsigma = len(sigmas) 
 
-        TargetModels = self.NGAmodel + ['CyberShake']
+	TargetModels = self.NGAmodel + ['CyberShake']
 
 	# weighting function for directivity
 	# read in file
 	srcsh_file = Gkxmfs_pth + '/SourceRuptureHypoInfo'
 	srcNmh = np.loadtxt( srcsh_file, dtype={'names':('sids','Nms','Nhs'),'formats':('i4','i4','i4')} )  
-	
-        for it in xrange( len(self.periods) ):
+
+	for it in xrange( len(self.periods) ):
 	    Ti = self.periods[it]
 	    Tkey = '%.2f'%Ti 
 
@@ -2794,7 +2783,7 @@ class cybershk_nga:
 
 		Nk = len(srcNmh['sids'])
 		Nhs = srcNmh['Nhs']
-		
+
 		if opt == 'Dkxs':
 		    Ddata = []
 		    for ik in xrange( Nk ):
@@ -2821,7 +2810,7 @@ class cybershk_nga:
 				RMS_h += sum( Ddata[ik][ih][:,imodel]**2 ) / self.Nloc 
 			    RMS_k += RMS_h / Nh
 			RMS.append( np.sqrt(RMS_k/Nk) )
-                if opt == 'Cks':
+		if opt == 'Cks':
 		    Cdata = []
 		    for ik in xrange( Nk ):
 			sid = srcNmh['sids'][ik]
@@ -2837,7 +2826,7 @@ class cybershk_nga:
 			for ik in xrange( Nk ):
 			    RMS_k += sum(Cdata[ik][:,imodel]**2) / self.Nloc 
 			RMS.append( np.sqrt(RMS_k/Nk) )
-	        
+
 		if opt == 'Bs':
 		    bsFile = bs_pth1 + '/CyberShake.NGAs.%s.bs'%Tkey
 		    Alldata = np.loadtxt( bsFile )[:,5:] 
@@ -2847,7 +2836,7 @@ class cybershk_nga:
 		    RMS = []
 		    for imodel in xrange( len(TargetModels) ):
 			RMS.append( np.sqrt(sum(Bdata[:,imodel]**2)/self.Nloc) )
-		    
+
 		# plot 
 		#fig.clf()
 		ax = fig.add_subplot( 111 )
@@ -2855,7 +2844,7 @@ class cybershk_nga:
 		line0 = ax.plot( xt, RMS, 'o-' )
 		lines.append( line0 ) 
 		sigmaStr.append( r'$\gamma = %.3f$'%sigmas[isigma] )
-	    
+
 	    lg = ax.legend( lines, sigmaStr, loc=0 )
 	    lg.draw_frame(False) 
 	    ax.set_title( 'Refmodel = %s, period = %s'%(refmodel, Tkey) )
@@ -2872,45 +2861,45 @@ class cybershk_nga:
 		fig.savefig( plotpth + '/CyberShake.NGAs.Sigmas.%s.Ref%s.RMS.%s.%s'%(Tkey, refmodel,opt,pfmt), format=pfmt )
 		fig.savefig( plotpth + '/CyberShake.NGAs.Sigmas.%s.Ref%s.RMS.%s.pdf'%(Tkey,refmodel,opt), format='pdf')
 
-    
+
 
 
     def BarPlot(self,sigma,refmodel='NoRef',wt=0): 
-	
+
 	# Plot A value, B,C,D map RMS values
 	sigmakey = 'Sigma%.2f'%sigma
 	Gkxmfs_pth=self.output_pth+'/Gkxmfs'      # path to save the interpolated results
 	dkxs_pth1 = Gkxmfs_pth + '/Dkxs/'+sigmakey 
 	cks_pth1 = Gkxmfs_pth + '/Cks/'+sigmakey
-        bs_pth1 = Gkxmfs_pth + '/Bs/'+sigmakey
-        a_pth1 = Gkxmfs_pth + '/A/'+sigmakey
+	bs_pth1 = Gkxmfs_pth + '/Bs/'+sigmakey
+	a_pth1 = Gkxmfs_pth + '/A/'+sigmakey
 
-        RMSpth = Gkxmfs_pth + '/RMS' 
+	RMSpth = Gkxmfs_pth + '/RMS' 
 
 	plotpth0 = self.flatfile_plot_pth00 + '/Gkxmfs'
 	plotpth1 = plotpth0 + '/All'
 	plotpth = plotpth1 + '/' + sigmakey
 	pfmt = 'eps'
-		    
+
 	for f in [ RMSpth, plotpth0, plotpth1, plotpth, ]:
 	    if not os.path.exists(f):
 		os.mkdir(f)
-        
+
 	if wt: 
 	    weighted='weighted'
 	else: 
 	    weighted='unweighted'
-    
+
 	# Reference model
 	iref = 5   # no reference  
 	for i in xrange( len(self.NGAmodel) ):
 	    if refmodel == self.NGAmodel[i]: 
 		iref = i
 		break 
-        if refmodel == 'CyberShake': 
+	if refmodel == 'CyberShake': 
 	    iref = 4 
 
-        TargetModels = self.NGAmodel + ['CyberShake']
+	TargetModels = self.NGAmodel + ['CyberShake']
 	Factors = ['d RMS','c RMS','b RMS','a']
 	clr=['r','g','b','k']
 
@@ -2926,7 +2915,7 @@ class cybershk_nga:
 	    srcNmh['sids'] = [srcNmh['sids'],]
 	    Nhs = [srcNmh['Nhs'],]
 
-        fig = init_fig(num=1,figsize=(12,8),dpi=100)
+	fig = init_fig(num=1,figsize=(12,8),dpi=100)
 	if len(self.periods) == 1: 
 	    axs = init_subaxes( fig, subs=(1,1),basic=(0.9,0.7,0.9,0.9) )
 	    abcd = ['(a)']
@@ -2936,7 +2925,7 @@ class cybershk_nga:
 	    abcd = ['(a)','(b)','(c)','(d)']
 
 	for it in xrange( len(self.periods) ):
-	    
+
 	    Ti = self.periods[it]
 	    Tkey = '%.2f'%Ti 
 
@@ -2966,7 +2955,7 @@ class cybershk_nga:
 			RMS_h += sum( Ddata[ik][ih][:,imodel]**2 ) / self.Nloc 
 		    RMS_k += RMS_h / Nh
 		RMSd.append( np.sqrt(RMS_k/Nk) )
-	    
+
 	    # Cks
 	    Cdata = []
 	    for ik in xrange( Nk ):
@@ -2983,7 +2972,7 @@ class cybershk_nga:
 		for ik in xrange( Nk ):
 		    RMS_k += sum(Cdata[ik][:,imodel]**2) / self.Nloc 
 		RMSc.append( np.sqrt(RMS_k/Nk) )
-	    
+
 	    # Bs
 	    bsFile = bs_pth1 + '/CyberShake.NGAs.%s.bs'%Tkey
 	    Alldata = np.loadtxt( bsFile )[:,5:] 
@@ -2993,14 +2982,14 @@ class cybershk_nga:
 	    RMSb = []
 	    for imodel in xrange( len(TargetModels) ):
 		RMSb.append( np.sqrt(sum(Bdata[:,imodel]**2)/self.Nloc) )
-	
+
 	    # A value
 	    file_e0 = a_pth1 + '/CyberShake.NGAs.%s.a'%Tkey
 	    tmp_e0 = np.loadtxt( file_e0, skiprows=1 )
 	    tmp_e0[:-2] = tmp_e0[-2] - tmp_e0[:-2]   # NGA models
 	    if iref != 5: 
 		tmp_e0[:-1] = tmp_e0[:-1] - tmp_e0[iref]    # including CyberShake as the target model
-            
+
 	    RMS = np.r_[[RMSd],[RMSc],[RMSb],[tmp_e0[:-1].tolist()]]
 	    RMS = np.array(RMS)
 
@@ -3010,7 +2999,7 @@ class cybershk_nga:
 
 	    # plot 
 	    xt = np.arange( len(TargetModels) )
-	    
+
 	    # bar plot
 	    if 0:
 		yt = np.arange( 4 )   # A,B,C,D
@@ -3026,39 +3015,39 @@ class cybershk_nga:
 		for item in xrange( 4 ):
 		    index = 5*item
 		    ax.bar3d( xpos[index:index+5], ypos[index:index+5], zpos[index:index+5], \
-			    dx[index:index+5], dy[index:index+5], dz[index:index+5], color=clr[item] )
+		              dx[index:index+5], dy[index:index+5], dz[index:index+5], color=clr[item] )
 		ax.w_xaxis.set_ticklabels(TargetModels)
 		ax.w_yaxis.set_ticklabels(Factors)
 		ax.set_zlabel('RMS')
 		ax.set_xlabel('Models')
 		ax.set_ylabel('Factors')
-	    
+
 	    if 1: 
 		ax = fig.add_axes( axs[it] )
 		lines = []
 		for item in xrange( 4 ):
 		    line0 = ax.plot( xt, RMS[item,:], clr[item]+'-o' )
 		    lines.append( line0 )
-		
+
 		ax.set_xlim([-1,5])
-		
+
 		ax.set_xticks(xt)
 		ax.set_xticklabels( TargetModels )
 		xticknames = plt.setp(ax,xticklabels=TargetModels)
 		plt.setp(xticknames, rotation=0, fontsize=10)
 		ax.set_xlabel('Models')
-		
+
 		ax.set_ylabel('Factor values')
 		ax.set_ylim([-1,1])
-		
+
 		ax.text( -0.5, 0.7, abcd[it], fontsize=14)
-		
+
 		if it == 0:
 		    lg = ax.legend( lines, Factors, loc='lower center' )
 		    lg.draw_frame(False)
 		    ltext = plt.gca().get_legend().get_texts()
 		    plt.setp(ltext, fontsize=8)
-		
+
 		#ax.set_title( r'Reference = %s, period = %s, $\gamma$ = %s'%(refmodel, Tkey, '%.2f'%sigma) )
 		plt.grid(True)
 
@@ -3068,7 +3057,7 @@ class cybershk_nga:
 		else:
 		    fig.savefig( plotpth + '/CyberShake.NGAs.periods.%s.Ref%s.RMS.%s.pdf'%(sigmakey,refmodel,weighted), format='pdf')
 		    fig.savefig( plotpth + '/CyberShake.NGAs.periods.%s.Ref%s.RMS.%s.%s'%(sigmakey,refmodel,weighted, pfmt), format=pfmt )
-    
+
 
 
 
@@ -3079,10 +3068,10 @@ class cybershk_nga:
     # This step is to make CyberShake more like NGA data
     def DkxsAnalysis(self, CyberShakeRvar, ngaP, sites_info, rups_info, Sources, ngaD=None):
 
-        # PATH info
+	# PATH info
 	Gkxmfs_pth= self.output_pth+'/GkxmfsDmap'      # path to save directivity analysis results (weighting functions)
 
-        # file save path
+	# file save path
 	dkxs_pth = Gkxmfs_pth + '/Dkxs' 
 	SDks_pth = Gkxmfs_pth + '/SDks' 
 
@@ -3092,10 +3081,10 @@ class cybershk_nga:
 	    if not os.path.exists(f):
 		os.mkdir(f)
 	pfmt = 'eps'
-	
+
 	Nk = len( CyberShakeRvar )
 
-	 
+
 	# top loop
 	for it, Ti in enumerate( self.periods ): 
 	    # loop over periods (it could be one period)
@@ -3108,17 +3097,17 @@ class cybershk_nga:
 	    Gkxmfs = []
 	    pdf_f = []; pdf_m = []
 	    for ik in xrange( Nk ):
-		
+
 		Nm = len( CyberShakeRvar[ik] )
 		tmpCS = []
 		for irup in xrange( Nm ):
 		    tmpCS.append( np.log( CyberShakeRvar[ik][irup][Tkey] ) )   # [irup][ih,islip,ista]
 		tmp_CS = np.array( tmpCS )
-	        Nm,Nh,Nf,Nsta = tmp_CS.shape
+		Nm,Nh,Nf,Nsta = tmp_CS.shape
 
 		Gkxmfs.append( tmp_CS )
 		del(tmpCS)
-		
+
 		# set up weighting functions for slip-distribution and stress drop
 		pdf_f.append([])
 		pdf_m.append([])
@@ -3128,15 +3117,15 @@ class cybershk_nga:
 		AreaTmp = Nrow*Ncol  # in km
 		mu = 3.87 + np.log10(AreaTmp) * 1.05   # somerville 2006 M-A relationship
 		std = 0.2
-		
+
 		prob0 = 1./(np.sqrt(2.*np.pi)*std) * np.exp(-0.5*((Mws-mu)/std)**2)
 		pdf_m[ik] = prob0 / sum(prob0)    # weighting should be summed up to 1
 		pdf_m[ik] = pdf_m[ik].tolist()
-		
+
 		# slip distribution (just use uniform distribution)
 		for ivar in xrange( Nf ):
 		    pdf_f[ik].append( 1./Nf ) 
-		
+
 	    # weighting functions for source and sites
 	    pdf_k = np.ones(Nk)/Nk
 	    pdf_s = np.ones(self.Nloc)/self.Nloc
@@ -3145,8 +3134,8 @@ class cybershk_nga:
 	    del( Gkxmfs )
 
 	    Hkxs['CyberShake'] = []
-            Dkxs['CyberShake'] = []
-            
+	    Dkxs['CyberShake'] = []
+
 	    # NGA Models
 	    for inga in xrange( len(self.NGAmodel) ):
 		nga = self.NGAmodel[inga]
@@ -3166,7 +3155,7 @@ class cybershk_nga:
 				tmp[ir,:,ista] =  np.log( ngaP[nga][ik][Tkey][ir][0][ista]  ) 
 		    TargetModel[nga].append( tmp )
 		    del(tmp)
-            
+
 	    # decomposition 
 	    models = ['CyberShake'] + self.NGAmodel 
 	    sumSDk = {}
@@ -3175,14 +3164,14 @@ class cybershk_nga:
 		for ik in xrange( Nk ):
 		    if model == 'CyberShake':   
 			Nm, Nh, Nf, Nsta = TargetModel[model][ik].shape
-			
+
 			tmp_xms = np.average( TargetModel[model][ik], axis=2, weights = pdf_f[ik] )
 			Hkxs0 = np.average( tmp_xms, axis=0, weights=pdf_m[ik] )
 		    else:
 			Nm, Nh, Nsta = TargetModel[model][ik].shape
 			tmp_xms = TargetModel[model][ik]
 			Hkxs0 = np.average( tmp_xms, axis=0, weights=pdf_m[ik] )
-		    
+
 		    # sites
 		    meta = sites_info[ik]
 		    sites_run = meta.keys()
@@ -3198,7 +3187,7 @@ class cybershk_nga:
 			tmp[ih,:] = interp( slon, slat, Hkxs0[ih,:], self.slon1d, self.slat1d, eps=self.eps, method=self.method )
 		    Hkxs[model].append( tmp ) 
 		    del( tmp )
-	            
+
 		# loop over half width of the hypocenter location distribution
 		sumSDk0 = []; Dkxs0 = []
 		for isigma in xrange(len(sigmas)): 
@@ -3217,17 +3206,17 @@ class cybershk_nga:
 			tmp.append( sum( SDks0[ik] )/self.Nloc)
 		    sumSDk0.append(tmp)
 		    Dkxs0.append(Dkxs00)
-		 
-	        sumSDk[model] = np.array(sumSDk0) 
+
+		sumSDk[model] = np.array(sumSDk0) 
 		Dkxs[model] = Dkxs0 
 
-            # we now have sumSDk[model][sigma][ik]
+	    # we now have sumSDk[model][sigma][ik]
 
-            # compute residual d-map[model] and sumSdk[model] and plot
+	    # compute residual d-map[model] and sumSdk[model] and plot
 	    # plot sigmas and sumSDks
 	    sumSdk = {}
 	    for inga,nga in enumerate( self.NGAmodel ):
-		
+
 		# compute standard deviation 
 		sumSdk0 = []
 		for isigma in xrange( len(sigmas) ): 
@@ -3241,7 +3230,7 @@ class cybershk_nga:
 			pdf_x = prob0/ sum(prob0)    # to make sure sum(prob) = 1
 			DkxsTmp = Dkxs['CyberShake'][isigma][ik] - Dkxs[nga][isigma][ik]  # residual d
 			tmp.append( np.sqrt( np.average( DkxsTmp**2, axis=0, weights=pdf_x ) ) ) 
-                    tmp1 = []
+		    tmp1 = []
 		    for ik in xrange(Nk):
 			tmp1.append( sum(tmp[ik])/self.Nloc )
 		    sumSdk0.append(tmp1)
@@ -3269,7 +3258,7 @@ class cybershk_nga:
 			ax.set_ylabel( r'$\sigma_d$' )
 		fig.savefig( plotpth + '/SigmaDkxs.NGAs.Source%s.%s.%s'%(sid,Tkey,pfmt), format=pfmt, dpi=300 )
 
-            # ===============
+	    # ===============
 	    # save to files
 	    # ===============
 	    if 0:
@@ -3280,13 +3269,13 @@ class cybershk_nga:
 		    sid = Sources[ik]
 		    Mws, Nrow, Ncol, rake, dip, ztor, zbom = rups_info[ik]
 		    Nm,Nh,Nf,Nsta = TargetModel[ik].shape
-		    
+
 		    # source info
 		    src_fid.write('%s %s\n'%(sid,Nrow*Ncol))
 		    srcsh_fid.write('%s %s %s\n'%(sid,Nm,Nh))
-		    
+
 		    Nh = dkxs0[ik].shape[0]
-		    
+
 		    # D-Map
 		    dkxs_pth0 = dkxs_pth + '/%s'%sid
 		    for f in [dkxs_pth0,]:
@@ -3298,22 +3287,22 @@ class cybershk_nga:
 			fid = open( dkxsFile, 'w' )
 			for iloc in xrange(self.Nloc): 
 			    fid.write( '%s %s %s\n'%(\
-				       self.slon1d[iloc], self.slat1d[iloc],\
-				       dkxs0[ik][ih,iloc],\
-				       ))
+			        self.slon1d[iloc], self.slat1d[iloc],\
+			        dkxs0[ik][ih,iloc],\
+			    ))
 			fid.close()
-		    
+
 		    # Standard deviation of D-Map
 		    # sigma k_xs
 		    SDksFile = SDks_pth + '/CyberShake.%s.%s.Source%s.Sdks'%(nga,Tkey, sid)
 		    fid = open( SDksFile, 'w' )
 		    for iloc in xrange(self.Nloc): 
 			fid.write( '%s %s %s\n'%(\
-				       self.slon1d[iloc], self.slat1d[iloc],\
-				       Sdks0[ik][iloc],\
-				       ) )
+			    self.slon1d[iloc], self.slat1d[iloc],\
+			    Sdks0[ik][iloc],\
+			) )
 		    fid.close()
-		
+
 		src_fid.close()
 		srcsh_fid.close()
 
