@@ -50,19 +50,22 @@ class cybershk_nga:
 	# dictionary with key: CB,BA,CY,AS, and with subdictionary contains updated (if no, then set None) coefficients
 	self.NGAs = NGAs     
 	self.Reference = Reference
-
+	
+	# Those paths should be ready before running anything
 	self.wkd = wkd
 	self.util = os.path.join( self.wkd, 'utils' )
-	self.plots = os.path.join( self.wkd, 'plots' )     
 	self.scripts = os.path.join( self.wkd, 'scripts' )     # changable
 	self.datapth = os.path.join( self.wkd, 'data' )    # data 
 
-	# NGA and Directivity flatfile utility
+	# ===================== The following folders will be generated 
+	self.plots = os.path.join( self.wkd, 'plots' )     
 	#self.isodirect_pth = os.path.join( self.util, 'isodirect_util')
 	#self.rNGA_pth = os.path.join( self.util, 'nga_util' )
-	#self.fDcpt_pth = os.path.join( self.util, 'fD_compute' )
-	#self.fD_input = self.fDcpt_pth+'/inputs/' 
-	#self.fD_output = self.fDcpt_pth + '/outputs/' 
+	
+	# Directivity flatfile utility (compute directivity)
+	self.fDcpt_pth = os.path.join( self.util, 'fD_compute' )
+	self.fD_input = self.fDcpt_pth+'/inputs/' 
+	self.fD_output = self.fDcpt_pth + '/outputs/' 
 
 	self.metapth = os.path.join( self.wkd, 'metadata/' )   # preprocess
 	self.CSmeta0 = self.metapth+'CyberShake/'   # CyberShake
