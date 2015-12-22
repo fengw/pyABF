@@ -17,6 +17,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from time import sleep 
 import MySQLdb as mdb
 
+import pyproj 
+
 # =============
 # NGA package with Directivity
 # =============
@@ -28,15 +30,170 @@ from pynga.AS08 import *
 from pynga.SC08 import *
 from pynga.utils import *
 
-# ====================
-# use my_util tools
-# ====================
-#from my_util.geopy import *
-#from my_util.signal import *
-#from my_util.numer import *
-#from my_util.indpy import *
-#from my_util.functools import *
-#from my_util.image import * 
+
+# ================
+# Geo related utilities
+# ================
+def projection(x,y,**kwds):
+    """ 
+    Projection of lon/lat to UTM or reverse direction
+    input:
+    x,y ( lon/lat or x/y )
+    kwds: zone, origin, rot, inverse
+    
+    output:
+    x,y ( x/y or lon/lat )
+    """
+
+    zone = kwds['zone']
+    origin = kwds['origin']
+    rot = kwds['rot']
+    inverse = kwds['inverse']
+
+    if origin == None:
+	return
+
+    # geometrical origin
+    x0 = origin[0]; y0 = origin[1]
+    
+    rot = rot*np.pi/180.
+    c,s = np.cos(rot),np.sin(rot)
+    
+    x = np.array(x,'f')
+    y = np.array(y,'f')
+
+    proj = pyproj.Proj(proj='utm',zone=zone,ellps='WGS84')
+    
+    if inverse:
+	x0,y0 = proj(x0,y0,inverse=False)
+	x,y = c*x-s*y, s*x+c*y
+	x,y = x+x0,y+y0
+	x,y = proj(x,y,inverse=True)
+    
+    else:
+
+	x0,y0 = proj(x0,y0,inverse=False)
+	x,y = proj(x,y,inverse=False)
+	x,y = x-x0,y-y0
+	x,y = x*c+y*s, -s*x+c*y
+
+    return x,y
+ 
+ 
+# point and a plane
+def point_plane(point0,points):
+    """
+    point and line relationship 
+    distance and the coordinate on a plane
+    reference: 
+    http://jtaylor1142001.net/calcjat/Solutions/VPlanes/VP3Pts.htm
+    http://www.9math.com/book/projection-point-plane
+
+    Input: 
+	point0: a point outside or within the plane
+	points (3 row, 3 col LIST contains three know points on the plane)
+    Output:
+	D: distance between point0 and the plane
+	point1: projection point of point0 on the plane
+    """
+    
+    points = np.array(points)
+    vn = np.cross(points[1,:]-points[0,:], points[2,:]-points[0,:])  # plane normal
+    vn = vn / np.sqrt( np.dot(vn,vn) )   # get the normal vector of the plane
+
+    a = vn[0]; b = vn[1]; c = vn[2]
+    d = -a*points[0,0]-b*points[0,1]-c*points[0,2]
+    
+    u,v,w = point0
+    
+    L1 = a*u+b*v+c*w+d
+    L2 = a**2+b**2+c**2
+    x = u-a*L1/L2
+    y = v-b*L1/L2
+    z = w-c*L1/L2
+
+    point1 = x,y,z
+    dist = abs( L1 )/ np.sqrt( L2 )
+
+    return dist, point1 
+ 
+
+# ==========================================================
+# General interpolation (1D and 2D, or even 3D) based on lease-square inversion
+# the both known points and unknown points could be irregular!
+def interp(xj,yj,zj,xi,yi,debug=0,eps=0.1,method={'name':'exp','smooth':10}):
+    """
+    General 1d and 2d interpolation based on inversion theory
+    Input:
+       (xj,yj): location for known point j (j = 1,2,...,N)
+       yj = None: 1D case
+       zj: data points for point j
+       (xi,yi): location for esitmated point i (i = 1,2,...,M)
+       yi = None: 1D case
+       debug: for debug (=1)
+       method: dictionary for different covariance matrix
+       eps: noise ( the smaller, the better )
+       Note: smooth factor in method name = 'exp' should be small two, otherwise, it will be too sharp
+             it will be order of .1 or smaller in order to get good interpolation
+    Output:
+       zi: interpolated value for point i
+    """
+    import scipy.linalg 
+  
+    # 1. C^ff_jj*(B_ij).T
+    N = len(xj); M = len(xi)
+    mtype = method['name']
+    
+    if debug == 1:
+	print 'problem size: M,N = %d, %d'%(M,N)
+
+    if mtype == 'exp':
+	smooth = method['smooth']
+	dis1 = np.zeros( (M,N) )
+	dis2 = np.zeros( (N,N) )
+	
+	xxj, xxi = np.meshgrid( xj,xi )
+	dis1 = abs(xxi-xxj)    # might cause the problem of singularity when input coordinates are in lon/lat
+	
+	xxj1, xxj2 = np.meshgrid( xj, xj )
+	dis2 = abs(xxj1-xxj2)
+	
+	if yj != None:
+	    yyj,yyi = np.meshgrid( yj,yi )
+	    dyy = yyi-yyj
+
+	    yyj1, yyj2 = np.meshgrid( yj, yj )
+	    dyy1 = yyj1-yyj2
+
+	    dis1 = np.sqrt( dis1**2 + dyy**2 )
+	    dis2 = np.sqrt( dis2**2 + dyy1**2 )
+
+	if debug == 1:
+	    print 'distance size should be: (%d, %d) and (%d, %d)'%(M,N,N,N)
+	    print 'Actual size is: ', dis1.shape,dis2.shape
+	    print 'distance computed'
+	A1 = np.exp( -smooth*dis1 )   # C_ff*B
+	A2 = np.exp( -smooth*dis2 )   # B*C_ff*B
+
+    # correction for eps == 0:
+    if eps == 0: 
+	eps = 0.0001 
+
+    # common for every option
+    for j in xrange( N ):
+	A2[j,j] += eps**2         # (B*C_ff*B+C_nn)
+
+    A22 = scipy.linalg.inv( A2 )  # (B*C_ff*B.T+C_nn)^-1
+    if debug == 1:
+	print 'A1 A2 size should be: (%d, %d) and (%d, %d)'%(M,N,N,N)
+	print 'A1 and A2 actual size are: ', A1.shape, A22.shape
+	print 'A1, A2 computed'
+     
+    zi = scipy.matrix(A1)*scipy.matrix(A22)*scipy.matrix(zj).T
+    zi = scipy.array( zi )
+
+    return zi[:,0]
+
 
 
 def GetKey4(group_i,index_j,rup_var_id, Ti):
@@ -205,428 +362,6 @@ def ExtractListGen(cursor, Sites, Sources, Ruptures, fid, rup_model_ids=(35,5,3,
 	SourceRups.append( [sids,rids] ) 
 
     return Sites, SourceRups
-
-
-# Correlation analysis (dataset of CyberShake)
-def PlotDataSet(Inpth, fname, Plotpth, plotname, savetype):
-    
-    # read in flatdata
-    filename = Inpth + fname
-    data = np.loadtxt( filename )
-    Mws = data[:,2]
-    rakes = data[:,3]
-    Rjbs = data[:,4]
-    Vs30s = data[:,5]
-    
-    Nrecord = len( Mws )
-
-    # plot 
-    fig = init_fig( num=1, figsize=(14,10), dpi=100 )
-    fig.text( 0.2, 0.95, 'Total number of seismograms: %s'%Nrecord )
-    axs = init_subaxes( fig, subs=(2,2), basic=(0.7,0.7,0.7,0.7) )
-    
-    ax = fig.add_axes( axs[0] )
-    ax.hist( Mws, bins = 30 )
-    ax.set_xlabel( '$M_w$' )
-    #ax.set_ylabel( '# of records' )
-
-    ax = fig.add_axes( axs[1] )
-    group,group_names = RakeBin(rakes)
-    Ng = len(group.keys())
-    ind = np.arange( Ng )+1; width = 0.5
-    Nrake = []; clr = []; Names = []; rects = []
-    for ikey, key in enumerate( group.keys() ):
-	Nrake = len( group[key] ) 
-	#Names.append( group_names[key][1] )
-	Names.append( key )
-	rect0 = ax.bar(ind[ikey], Nrake, width, color = group_names[key][0])
-	rects.append( rect0[0] )
-    ax.set_xticks(ind+width/2)
-    ax.set_xticklabels( tuple( Names ) )
-    #ax.set_ylabel( '# of records' )
-    ax.set_title( 'Faulting' )
-
-    ax = fig.add_axes( axs[2] )
-    ax.hist( Rjbs, bins = 30 )
-    ax.set_xlabel( '$R_{jb}$' )
-    #ax.set_ylabel( '# of records' )
-
-    ax = fig.add_axes( axs[3] )
-    group,group_names = Vs30Bin(Vs30s)
-    Ng = len(group.keys())
-    ind = np.arange( Ng )+1; width = 0.5
-    Nrake = []; clr = []; Names = []; rects = []
-    for ikey, key in enumerate( group.keys() ):
-	Nrake = len( group[key] ) 
-	#Names.append( group_names[key][1] )
-	Names.append( key )
-	rect0 = ax.bar(ind[ikey], Nrake, width, color = group_names[key][0])
-	rects.append( rect0[0] )
-    ax.set_xticks(ind+width/2)
-    ax.set_xticklabels( tuple( Names ) )
-    #ax.set_ylabel( '# of records' )
-    ax.set_title( '$Vs_{30}$' )
-
-    fig.savefig( Plotpth + plotname, format = savetype, dpi = 300 )
-    #fig.savefig( Plotpth + plotname, format = savetype )
-
-
-# ================================================
-# Calculate the spectral intensities (for correlation analysis)
-# For validation
-# ================================================
-def rspectra( a, dt, period, dr = 0.05, chan='a', pseudo=True ):
-    # use irc to compute
-    n = len(a)  # length of the input series
-    pr = period
-    wn = 2*np.pi/pr
-
-    if chan == 'v':
-	u,a = v2ua( a, dt )    # velocity to acceleration
-    elif chan == 'u':
-	v,a = u2va( a, dt )    # displacement ot acceleration 
-    
-    # impulse response convolution (irc)
-    wd = wn*np.sqrt(1-dr*dr)
-    t = dt*np.arange(n)
-
-    im0 = -1./wd * np.exp( -dr*wn*t ) * np.sin( wd*t )   # implusive response of oscillator
-    Nfft,ntmp = n2pow(n)
-
-    # convolution in frequency domain (using FFT)                                
-    x = np.fft.ifft( np.fft.fft( im0,Nfft )*np.fft.fft( a,Nfft ) ) * dt                    
-    
-    t0 = 0.0
-    nt = n
-    
-    # header info
-    hd = [pr, dr, dt, t0, nt]
-    
-    if not pseudo:
-	im1 = np.exp( -dr*wn*t ) * ( dr*wn/wd * np.sin( wd*t ) - np.cos( wd*t ) )
-	im2 = np.exp( -dr*wn*t ) * ( (wd**2-(dr*wn)**2)/wd * np.sin( wd*t ) + 2.*dr*wn*np.cos( wd*t ) )
-	x1 = np.fft.ifft( np.fft.fft( im1,Nfft )*np.fft.fft( a,Nfft ) ) * dt                    
-	x2 = np.fft.ifft( np.fft.fft( im2,Nfft )*np.fft.fft( a,Nfft ) ) * dt                    
-        return hd, x, x1, x2
-    else: 
-	return hd, x
-
-
-def calc_SI(input,dt,h1,h2,dr=0.05,chan='a'):
-    # Compute spectra intensity (integral over time window, or duration)
-    if chan == 'v':
-        v = input
-	u,a = v2ua( input, dt )    # velocity to acceleration
-    elif chan == 'u':
-	u = input
-	v,a = u2va( input, dt )    # displacement to acceleration 
-    elif chan == 'a':
-	a = input
-	u,v = a2uv( input, dt )    # acceleration to displacement and velocity
-    else:
-	print 'chan should be u, v, or a'
-	raise ValueError
-    chan = 'a'
-
-    if h1 <= h2: 
-	print 'h1 should be much larger than h2'
-	raise ValueError
-
-    periods = np.arange( 0.1, 2.5+h1, h1 )
-    PSV_T = []; SA_T = []
-    for it in xrange( len(periods) ):
-	period = periods[it]
-        wn = 2.*np.pi / period
-
-	hd, x = rspectra( a, dt, period, dr=dr, chan=chan )
-	Sd,ind_d = maxi(abs(x))
-	
-	# we use pseudo PSV and PSA
-	Sv = wn*Sd
-	Sa = wn*Sv
-        
-	SA_T.append(Sa)
-	PSV_T.append(Sv)
-    
-    periods_new = np.arange( 0.1, 2.5+h2, h2 )
-    PSV = interp1d( periods, PSV_T, periods_new, 0, 0 )
-    SI = sum( PSV ) * h1 
-
-    periods_new = np.arange( 0.1, 0.5+h2, h2 )
-    SA = interp1d( periods, SA_T, periods_new, 0, 0 )
-    ASI = sum( SA ) * h1
-    return SI, ASI 
-
-
-
-def calc_IMs( input, dt, periods, SI_ASI=None, dr=0.05, chan='a'):
-    """
-    # Compute IMs for given accelation
-    periods: at which SA will be computed
-    SI_ASI = [flag,h1,h2], if flag != 0:
-    h1 = 0.05; h2 = 0.01
-    h1, h2 : for SI and ASI computation ( h1 > h2 ), interpolation
-    """
-    input = np.array( input, 'f' )
-    if chan == 'v':
-        v = input
-	u,a = v2ua( input, dt )    # velocity to acceleration
-    elif chan == 'u':
-	u = input
-	v,a = u2va( input, dt )    # displacement to acceleration 
-    elif chan == 'a':
-	a = input
-	u,v = a2uv( input, dt )    # acceleration to displacement and velocity
-    else:
-	print 'chan should be u, v, or a'
-	raise ValueError
-    chan = 'a'
-    output = {}
-
-    # PGD, PGV, PGA, SI, and ASI (Now a is acceleration)
-    pgd = max( abs(u) )
-    pgv = max( abs(v) )
-    pga = max( abs(a) )
-
-    output['PGD'] = pgd
-    output['PGV'] = pgv
-    output['PGA'] = pga
-
-    try: 
-	Np = len(periods)
-    except: 
-	periods = [periods]
-	Np = len(periods)
-
-    # SD, SV and SA
-    output['SA'] = []
-    for it in xrange( len(periods) ):
-	period = periods[it]
-        wn = 2.*np.pi / period
-       
-        hd, x = rspectra( a, dt, period, dr=dr, chan=chan )
-        t0 = hd[3]
-
-	Sd,ind_d = maxi(abs(x))
-	Sv = wn*Sd
-	Sa = wn*Sv
-	output['SA'].append(Sa)    # SA in cm/s^2
-    
-    # SI and ASI calculating
-    if SI_ASI != None:
-	h1,h2 = SI_ASI
-	SI, ASI = calc_SI(a, dt, h1, h2)
-
-	output['SI'] = SI
-	output['ASI'] = ASI
-
-    return output
-
-
-def CalcGMRotIpp(input1,input2,osc1,osc2,periods,pp=-1, GeoMean=True, RotD=False):
-    
-    input1 = np.array( input1 )
-    input2 = np.array( input2 )
-    osc1 = np.array( osc1 )
-    osc2 = np.array( osc2 )
-    Np = len(osc1) 
-    
-    # outputs:
-    output = {}; cita_min = {}
-    
-    # compute as-record PGA (what about the rotation-independent PGA?)
-    if GeoMean:
-	output['PGA'] = np.sqrt( max(abs(input1))*max(abs(input2)) )
-    else: 
-	output['PGA'] = [max(abs(input1)), max(abs(input2))]
-
-    cita_min['PGA'] = -1
-
-    if pp < 0:
-	# compute as-recorded SA
-	GMsa = []
-	for ip in xrange( Np ):
-	    SA1p = max(abs(osc1[ip,:]))
-	    SA2p = max(abs(osc2[ip,:]))
-	    if GeoMean: 
-		GMsa.append(np.sqrt(SA1p*SA2p))
-	    else: 
-		GMsa.append( [SA1p,SA2p] ) # x and y (determined by the computing box of CyberShake)
-	
-	output['SA'] = GMsa
-	cita_min['SA'] = -1
-     
-    else:
-	# do the rotation
-	citas = range( 0, 91 )   # rotation angle
-	Nc = len(citas)
-	
-	GM0 = []; GM1 = [] 
-	for ip in xrange( Np ):
-	    
-	    GMsa = []
-	    for ic in xrange( Nc ):
-		cita = citas[ic] * np.pi / 180.  # degree to radius
-		c = np.cos(cita); s = np.sin(cita)
-		osc1p = c * osc1[ip,:] + s * osc2[ip,:]
-		osc2p = -s * osc1[ip,:] + c * osc2[ip,:]
-		SA1p = max(abs(osc1p))    # get SA value
-		SA2p = max(abs(osc2p))    
-		GMsa.append(np.sqrt(SA1p*SA2p))
-	    GM0.append( GMsa )  # GM(cita,T)
-	    
-	    # find GMRotDpp(T)
-	    GM_rank,index = sorti( GMsa )
-	    GM1.append( np.percentile(GM_rank, pp) ) 
-
-        if not RotD: 
-	    
-	    GM0 = np.array( GM0 )
-	    GM1 = np.array( GM1 )
-	    
-	    # Compute penalty(cita)
-	    penalty = 10000.
-	    for ic in xrange( Nc ):
-		tmp = 1./Np * sum( (GM0[:,ic]/GM1[:]-1)**2 )
-		if tmp <= penalty:
-		    penalty = tmp
-		    index_cita = ic
-	    cita_min0 = citas[index_cita]   # find the minimum cita
-
-	    output['SA'] = list( GM0[:,index_cita] )
-	    cita_min['SA'] = citas[index_cita]
-
-	else: 
-	    output['SA'] = GM1
-	    cita_min['SA'] = -1
-
-    return output, cita_min
-
-
-def CalcRotIppIMs( inputx, inputy, dt, periods, dr=0.05, chan='a', pp=-1, GeoMean = True, RotD=False ):
-    """
-    Compute Rot-Independent IM (Geometrical mean) 
-    Following Boore 2006
-
-    periods: at which SA will be computed
-    default gives the geometrical mean or the Rot independent geometrical mean 
-    """
-    inputx = np.array( inputx, 'f' )
-    inputy = np.array( inputy, 'f' )
-
-    if chan == 'v':
-        vx = inputx
-	vy = inputy
-	ux,acx = v2ua( inputx, dt )    # velocity to acceleration
-	uy,acy = v2ua( inputy, dt )    # velocity to acceleration
-    elif chan == 'u':
-	ux = inputx
-	vx,acx = u2va( inputx, dt )    # displacement to acceleration 
-	uy = inputy
-	vy,acy = u2va( inputy, dt )    # displacement to acceleration 
-    elif chan == 'a':
-	acx = inputx
-	ux,vx = a2uv( inputx, dt )    # acceleration to displacement and velocity
-	acy = inputy
-	uy,vy = a2uv( inputy, dt )    # acceleration to displacement and velocity
-    else:
-	print 'chan should be u, v, or a'
-	raise ValueError
-
-    chan = 'a'
-    
-    try: 
-	Np = len(periods)
-    except: 
-	periods = [periods]
-	Np = len(periods)
-    
-    # response(w0,t) as calculated
-    osc1 = []; osc2 = []
-    for it in xrange( len(periods) ):
-	period = periods[it]
-	hd,x,x1,osc10 = rspectra( acx, dt, period, dr=dr, chan=chan, pseudo=False )
-	hd,x,x1,osc20 = rspectra( acy, dt, period, dr=dr, chan=chan, pseudo=False )
-	osc1.append( osc10 )
-	osc2.append( osc20 )
-    
-    output, cita_min = CalcGMRotIpp(acx, acy, osc1, osc2, periods, pp=pp, GeoMean=GeoMean, RotD=RotD)
-    
-    # the unit of SA is depending on the input series !!!
-
-    # output has key: PGA, SA
-    return output
-
-
-
-# correlation coefficient (for validation)
-# follow Bradley 2011
-def corrcoef_sd(rho,Nsample,alpha):
-    # http://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient
-    ci = []
-
-    # table (just for 95%, and 90% confidence interval)
-    mu2 = {'0.05': 1.96, '0.10':1.6449} 
-    SE = 1./np.sqrt( Nsample-3 )
-    sigma = mu2['%s'%('%3.2f'%alpha)]*SE
-    for ir in xrange( len(rho) ):
-	a = np.arctanh( rho[ir] )
-	ci.append( [np.tanh(a-sigma), np.tanh(a+sigma)] )
-    return ci
-
-
-def rho_model( T, model='BB', Tref = None ):
-    if model == 'BB':
-	# BB 2011 model
-	if T < 0.01 or T > 10.0:
-	    print 'period exceeds the limit [0.01,10.0]'
-	    raise ValueError
-	else:
-	    if 0.01<=T<0.2:
-		an = 1.00
-		bn = 0.895
-		cn = 0.06
-		dn = 1.6
-	    else:
-		an = 0.97
-		bn = 0.25
-		cn = 0.8
-		dn = 0.8
-	    return 0.5*(an+bn) - 0.5*(an-bn) * np.tanh( dn*np.log(T/cn) )
-    
-    if model == 'JB01':
-	if T <0.05 and T > 5:
-	    print 'period exceeds the limit [0.01,10.0]'
-	    raise ValueError
-	else:
-	    return (0.5-0.127*np.log(T))*(0.05<=T<0.11) + \
-		    (0.968+0.085*np.log(T))*(0.11<=T<0.25) + \
-		    (0.568-0.204*np.log(T))*(0.25<=T<=5)
-    
-    if model == 'JJ08':
-	# Jaker and Jayaram 2008 Earthquake Spectra
-	# This is for the total residual (not for the inter- or intra- residual)
-	if Tref == None:
-	    print 'Tref should have valid value...'
-	    raise ValueError
-	else:
-	    Tmax = max( T, Tref )
-	    Tmin = min( T, Tref )
-	    C1 = 1 - np.cos( np.pi/2. - 0.366*np.log(Tmax/max(Tmin,0.109)) )
-	    if Tmax >= 0.2: 
-		C2 = 0.0 
-	    else: 
-		C2 = (1-0.105*(1-1/(1+np.exp(100*Tmax-5)))*(Tmax-Tmin)/(Tmax-0.0099) )
-	    C3 = C2* (Tmax<0.109) + C1 * (Tmax>=0.109)
-	    C4 = C1 + 0.5*(np.sqrt(C3)-C3) * (1+np.cos(np.pi*Tmin/0.109))
-	    if Tmax <= 0.109:
-		return C2
-	    elif Tmin > 0.109:
-		return C1
-	    elif Tmax < 0.2:
-		return min(C2,C4)
-	    else:
-		return C4
 
 
 
@@ -922,6 +657,8 @@ def im_gen(cursor, sid, rid, stanam, \
 	cursor.execute( query )       # run query
 	row_rup_var = cursor.fetchall()  
 	tmp = row_rup_var[-1][5].strip().split('-')
+	
+	print tmp
 	Nh = int(tmp[2][1:]) + 1
 	Nf = int(tmp[1][1:]) + 1
 	
@@ -997,6 +734,7 @@ def cpt_OpenSHA_nga(cwd, NGAmeta, sids, rids, Ti, SiteName=None, erf_id=35):
     fid.close()
     os.chdir( NGAmeta )
     if SiteName == None:
+	# add ABFanalysis/bin in the system PATH
 	os.system( 'nga_comparison_calc nga_inputs' )
     else:
 	os.system( 'nga_comparison_calc --site %s nga_inputs'%SiteName )

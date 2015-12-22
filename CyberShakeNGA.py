@@ -117,7 +117,8 @@ class cybershk_nga:
 	username = 'cybershk_ro'    # usrname                         
 	password = cybershk_database_Password   # password                        
 	database = 'CyberShake'     # Database name 
-
+	self.cybershk_database_psword = cybershk_database_Password
+	
 	try:
 	    self.db = mdb.connect( host = hostname, user = username, \
 	                           passwd = password, db = database )
@@ -476,7 +477,7 @@ class cybershk_nga:
 	rids1 = []
 	for ik in xrange( len( self.sids ) ):
 	    rids1.append( rids[ik][-1] )   # compute the last rupture for each source (the largest one)
-	cpt_OpenSHA_nga(self.scripts, self.NGAmeta, self.sids, rids1, periods, SiteName=SiteName, erf_id = self.erf_id )
+	#cpt_OpenSHA_nga(self.scripts, self.NGAmeta, self.sids, rids1, periods, SiteName=SiteName, erf_id = self.erf_id )
 	return 1
 
 
@@ -568,7 +569,7 @@ class cybershk_nga:
 	return np.array(sites_flat1)
 
 
-    def nga_Py(self, sid, meta_rup, meta, sites_flat=None, ref=0, Ts=None, model_name='BA', NGAdict=None):
+    def nga_Py(self, sid, meta_rup, meta, sites_flat=None, ref=0, Ts=None, model_name='BA', NGAdict=None, modelVersion='2014'):
 	"""
 	Compute NGA model, or reference models for given rupture set 
 	Using Python NGA classes to compute
@@ -580,6 +581,14 @@ class cybershk_nga:
 
 	W = (Zbom-Ztor)/np.sin(dip*np.pi/180.)   #
 
+	if modelVersion == '2014': 
+	    # check the application of pynga for NGA2
+	    if model_name == 'BA': 
+		model_name = 'BSSA'
+	    if model_name == 'AS': 
+		model_name = 'ASK'	    
+	print 'NGA model: ', modelVersion 
+	print model_name
 	# sitesinfo
 	if sites_flat == None: 
 	    sites_flat = self.sites_flatfile(sid,meta,meta_rup)
@@ -591,6 +600,8 @@ class cybershk_nga:
 	Rjb = list( tmp1[:,4] )
 	Rrup = list( tmp1[:,5] )
 	Rx = list( tmp1[:,6] )
+	Fhw = 1*(Rx>0) + 0*(Rx<=0) 
+
 	del( tmp1 )
 
 	if ref == 0:
@@ -608,17 +619,29 @@ class cybershk_nga:
 
 	# use the new NGA utils (combinations)
 	ngaP = {}
-	for ip in xrange( len(periods) ):
-	    Ti = periods[ip] 
-	    Tkey = '%.2f'%Ti    # attention to the 0.075
-	    ngaP[Tkey] = []
-	    for irup in xrange( len(Mws) ):
-		Mw = Mws[irup]
-		median, std, tau, sigma = NGA08(model_name, Mw, Rjb, Vs30, Ti, rake=rake,Mech=None,NGAs=dict1, \
-		                                Rrup=Rrup, Rx=Rx, dip=dip,W=W,Ztor=Ztor,Z25=Z25,Z10=Z10,Fas=0,AB11=None,VsFlag=0)
-		
-		ngaP[Tkey].append( [list(median), list(np.log(std)), list(np.log(tau)), list(np.log(sigma))] )
-
+	if modelVersion == '2008':
+	    for ip in xrange( len(periods) ):
+		Ti = periods[ip] 
+		Tkey = '%.2f'%Ti    # attention to the 0.075
+		ngaP[Tkey] = []
+		for irup in xrange( len(Mws) ):
+		    Mw = Mws[irup]
+		    median, std, tau, sigma = NGA08(model_name, Mw, Rjb, Vs30, Ti, rake=rake,Mech=None,NGAs=dict1, \
+			                            Rrup=Rrup, Rx=Rx, dip=dip,W=W,Ztor=Ztor,Z25=Z25,Z10=Z10,Fas=0,AB11=None,VsFlag=0)
+		    
+		    ngaP[Tkey].append( [list(median), list(np.log(std)), list(np.log(tau)), list(np.log(sigma))] )
+	else: 
+	    for ip in xrange( len(periods) ):
+		Ti = periods[ip] 
+		Tkey = '%.2f'%Ti    # attention to the 0.075
+		ngaP[Tkey] = []
+		for irup in xrange( len(Mws) ):
+		    Mw = Mws[irup]		    
+		    median, std, tau, sigma = NGA14(model_name, Mw, Rjb, Vs30, Ti, rake=rake,Mech=None,NGAs=dict1, \
+			                            Rrup=Rrup, Rx=Rx, Fhw=Fhw, dip=dip,W=W,Ztor=Ztor,Z25=Z25,Z10=Z10,Fas=0,VsFlag=0)
+		    
+		    ngaP[Tkey].append( [list(median), list(np.log(std)), list(np.log(tau)), list(np.log(sigma))] )
+	    
 	return ngaP   # [Tkey][irup][ista]
 
 
@@ -633,12 +656,7 @@ class cybershk_nga:
 	rake,dip,Ztor,Zbom = meta_rup[4:]
 
 	W = (Zbom-Ztor)/np.sin(dip*np.pi/180.)   #
-	
-	# check the application of pynga for NGA2
-	if model_name == 'BA': 
-	    model_name = 'BSSA'
-	if model_name == 'AS': 
-	    model_name = 'ASK'
+    
 	    
 	# sitesinfo
 	if sites_flat == None: 
@@ -902,7 +920,7 @@ class cybershk_nga:
 		ngaD[nga] = []
 
 	meta1_sites = []; meta1_rups=[]; Nhs = []
-	sids0, rids = RupSelect( self.sids )
+	sids0, rids = RupSelect( self.sids, self.cybershk_database_psword )
 	for ik in xrange( len(self.sids) ):
 	    sid = self.sids[ik]
 	    Sources.append(sid)
@@ -1938,13 +1956,6 @@ class cybershk_nga:
 		end_time0 = HourMinSecToSec(BlockName='ABF results saving ends')
 		hour,min,sec = SecToHourMinSec(end_time0-start_time0,BlockName='ABF saving')
 		print '='*30 + '\n'
-
-
-
-
-
-
-
 
 
     # Update model coefficients in NGA models (basin term, directivity)

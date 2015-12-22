@@ -4,7 +4,7 @@
 This is the general toolset/module for ABF analysis (specific application of the module can be found in github.com/fengw/ABFanalysis)
 
 Requirement
-    python 2.7 
+    python 2.7 (numpy, matplotlab, pyproj, MySQLdb, pynga)
     optional (to do the NGA analysis)
 	OpenSHA (along with Java)
 	Matlab 
