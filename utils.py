@@ -243,6 +243,11 @@ def ExtractRups(cursor,sids,rids,erf_id=35,rup_scenario_id=3):
     if rup_scenario_id == 4:
 	rup_scenario_id = 3
 
+    # rupture variation model
+    hypoStartIndex = 2    # s0000-h0000 
+    if rup_scenario_id > 4: 
+	hypoStartIndex = 1    # r000001
+
     for irup in xrange( len(sids) ):
 	sid = sids[irup]
 	rid = rids[irup]
@@ -275,7 +280,7 @@ def ExtractRups(cursor,sids,rids,erf_id=35,rup_scenario_id=3):
 	# regroup the hypocenter and slip variation
 	for k in xrange( len(row_rup_var) ):
 	    slip_hypo = row_rup_var[k][5].strip().split('-')
-	    tmp = int(slip_hypo[2][1:])
+	    tmp = int(slip_hypo[hypoStartIndex][1:])
 	    if tmp != k:
 		break
 	    Nh = tmp + 1 
@@ -453,7 +458,7 @@ def rup_gen(cursor, sid, rups_info, fid_stdout, erf_id=35, rup_scenario_id=3, hy
     # which gives all the same hypocenter locations (just this)
     if rup_scenario_id == 4:
 	rup_scenario_id = 3
-
+    
     # Ruptures
     query = "select * from Ruptures where ERF_ID = %s and Source_ID = %s"%(erf_id,sid)
     cursor.execute( query )       # run query
@@ -529,8 +534,13 @@ def rup_gen(cursor, sid, rups_info, fid_stdout, erf_id=35, rup_scenario_id=3, hy
 	
 	# regroup the hypocenter and slip variation 
 	tmp = row_rup_var[-1][5].strip().split('-')
-	Nh = int(tmp[2][1:]) + 1
-	Nf = int(tmp[1][1:]) + 1
+	if rup_scenario_id <= 4:
+	    Nh = int(tmp[2][1:]) + 1
+	    Nf = int(tmp[1][1:]) + 1
+	else: 
+	    # new rupture variation model
+	    Nh = int(tmp[1][1:]) + 1
+	    Nf = 1
 	hypo_loc = {}
 	
 	# get hypocenter locations
@@ -658,10 +668,13 @@ def im_gen(cursor, sid, rid, stanam, \
 	row_rup_var = cursor.fetchall()  
 	tmp = row_rup_var[-1][5].strip().split('-')
 	
-	print tmp
-	Nh = int(tmp[2][1:]) + 1
-	Nf = int(tmp[1][1:]) + 1
-	
+	if rup_scenario_id <= 4:
+	    Nh = int(tmp[2][1:]) + 1
+	    Nf = int(tmp[1][1:]) + 1
+	else: 
+	    Nh = int(tmp[1][1:]) + 1
+	    Nf = 1
+
 	# Get all periods (from IM_Types table based on IM_Type_ID)
 	query = "select * from %s"%('IM_Types')
 	cursor.execute( query )       # run query
