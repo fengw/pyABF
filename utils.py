@@ -469,7 +469,7 @@ def rup_gen(cursor, sid, rups_info, fid_stdout, erf_id=35, rup_scenario_id=3, hy
 	return rups_info
     else:
 	pass
-    
+
     # fault information (use the last one)
     SourceName = row_rup[-1][3]   # section name
     Nrow = row_rup[-1][8]  # vertical points on the fault plane
@@ -486,8 +486,8 @@ def rup_gen(cursor, sid, rups_info, fid_stdout, erf_id=35, rup_scenario_id=3, hy
 	    continue
 
     # Fault surface and trace line
-    # use the last Rupture ID to get the Full length of fault segment (Type A)
-    query = "select * from Points where ERF_ID= %s and Source_ID= %s and Rupture_ID=%s"%(erf_id,sid, Nrup-1)   
+    # use the last Rupture ID to get the Full length of fault segment (Type A) [for ERF=36, use ERF=35]
+    query = "select * from Points where ERF_ID= %s and Source_ID= %s and Rupture_ID=%s"%(35, sid, Nrup-1)   
     cursor.execute( query )      
     row_point = cursor.fetchall()
     Npoints = len(row_point)   
