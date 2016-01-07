@@ -5,9 +5,14 @@ Specific applications of the module can be found on github.com/fengw/ABFanalysis
 
 ## Requirement
 python 2.7 (numpy, matplotlab, pyproj, MySQLdb, pynga)
+
 optional (to do the NGA analysis)
+
 OpenSHA (along with Java)
+
 Matlab 
+
+python ABFanalysis.py 
 
 ## Note
    Add the path where this folder is located in to your python path (for library searching). 
