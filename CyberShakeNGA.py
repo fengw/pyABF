@@ -477,7 +477,7 @@ class cybershk_nga:
 	rids1 = []
 	for ik in xrange( len( self.sids ) ):
 	    rids1.append( rids[ik][-1] )   # compute the last rupture for each source (the largest one)
-	#cpt_OpenSHA_nga(self.scripts, self.NGAmeta, self.sids, rids1, periods, SiteName=SiteName, erf_id = self.erf_id )
+	cpt_OpenSHA_nga(self.scripts, self.NGAmeta, self.sids, rids1, periods, SiteName=SiteName, erf_id = self.erf_id )
 	return 1
 
 

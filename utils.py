@@ -459,8 +459,9 @@ def rup_gen(cursor, sid, rups_info, fid_stdout, erf_id=35, rup_scenario_id=3, hy
     if rup_scenario_id == 4:
 	rup_scenario_id = 3
     
-    # Ruptures
-    query = "select * from Ruptures where ERF_ID = %s and Source_ID = %s"%(erf_id,sid)
+    # Ruptures (consistent with Points, use erf_id = 35 since right now ERF_ID = 36 has no Points table in the database)
+    # The change from 35 to 36 is the resolution of the fault surface, the fault location and dimension stays the same!
+    query = "select * from Ruptures where ERF_ID = %s and Source_ID = %s"%(35,sid)
     cursor.execute( query )       # run query
     row_rup = cursor.fetchall()
     Nrup = len(row_rup)   
@@ -736,6 +737,9 @@ def cpt_OpenSHA_nga(cwd, NGAmeta, sids, rids, Ti, SiteName=None, erf_id=35):
     except:
 	Ti = [Ti,]
 	Nt = len(Ti)
+    
+    if erf_id != 35: 
+	erf_id = 35 
 
     nga_input = NGAmeta + 'nga_inputs'
     fid = open( nga_input, 'w' )
@@ -982,6 +986,7 @@ def SC08_input_FaultInfo(RupMetafile,fD_input,projection,kwds):
     lon1d = rups_info['fault'][0]
     lat1d = rups_info['fault'][1]
     dep1d = rups_info['fault'][2]
+    print Nrow, Ncol, len(lon1d) 
 
     lon2d = np.array(lon1d).reshape( (Nrow,Ncol) )
     lat2d = np.array(lat1d).reshape( (Nrow,Ncol) )
