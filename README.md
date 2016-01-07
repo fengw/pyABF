@@ -4,18 +4,19 @@ This is the general toolset/module for ABF analysis.
 Specific applications of the module can be found on github.com/fengw/ABFanalysis
 
 ## Requirement
-    * python 2.7 (numpy, matplotlab, pyproj, MySQLdb, pynga)
-    * optional (to do the NGA analysis)
-	OpenSHA (along with Java)
-	Matlab 
+python 2.7 (numpy, matplotlab, pyproj, MySQLdb, pynga)
+optional (to do the NGA analysis)
+OpenSHA (along with Java)
+Matlab 
 
 ## Note
-   Add the path where this folder is located in to your python path (for library searching) 
+   Add the path where this folder is located in to your python path (for library searching). 
    For example, if this folder pyABF is located in $HOME/local/pylib, then in your .bashrc
 
     export PYTHONPATH=${your path home path}/site-packages 
     export PYTHONPATH=${PYTHONPATH}:"$HOME/local/pylib" 
 
+We want to see what will happen.
 
 
 
