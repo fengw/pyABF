@@ -12,7 +12,6 @@ OpenSHA (along with Java)
 
 Matlab 
 
-	python ABFanalysis.py 
 
 ## Note
    Add the path where this folder is located in to your python path (for library searching). 
@@ -21,7 +20,6 @@ Matlab
     export PYTHONPATH=${your path home path}/site-packages 
     export PYTHONPATH=${PYTHONPATH}:"$HOME/local/pylib" 
 
-We want to see what will happen.
 
 
 
