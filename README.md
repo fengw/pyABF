@@ -12,7 +12,7 @@ OpenSHA (along with Java)
 
 Matlab 
 
-python ABFanalysis.py 
+	python ABFanalysis.py 
 
 ## Note
    Add the path where this folder is located in to your python path (for library searching). 
