@@ -486,12 +486,13 @@ class cybershk_nga:
 	"""
 	Compute NGA from OpenSHA database for given rupture set
 	"""
-	OpenSHA_output = OpenSHA_nga_files(self.NGAmeta,sid,rid, self.Ti,erf_id=self.erf_id)
+
+	OpenSHA_output = OpenSHA_nga_files(self.NGAmeta,sid,rid, self.Ti,erf_id=35)
 
 	sites_run = meta.keys()
 	Ns = len(sites_run)
 
-	ngaOpenSHA = OpenSHA_nga( self.NGAmeta, self.NGAmodel, sid, rid, self.Ti, erf_id=self.erf_id )
+	ngaOpenSHA = OpenSHA_nga( self.NGAmeta, self.NGAmodel, sid, rid, self.Ti, erf_id=35 )
 	ngaO = {}
 	for inga,nga in enumerate( self.NGAmodel ):
 	    ngaO[nga] = []
@@ -511,7 +512,7 @@ class cybershk_nga:
 	# This could be computed internally using the tools you developed
 	"""
 	rid = meta_rup[1][-1] 
-	OpenSHA_output = OpenSHA_nga_files(self.NGAmeta, sid, rid, 3.0, erf_id=self.erf_id)
+	OpenSHA_output = OpenSHA_nga_files(self.NGAmeta, sid, rid, 3.0, erf_id=35)
 
 	sites_flat_str = {}
 	sites_flat = {}
