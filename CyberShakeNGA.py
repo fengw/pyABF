@@ -30,8 +30,9 @@ class cybershk_nga:
                       'AS':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)},\
                       'SC':{'NewCoefs':{'CB':None,'BA':None,'CY':None,'AS':None},\
                             'predictors':{'cuteps':{'vr/vs':0.8,'c_cut':2.45,'s_cut':75,'r_cut':0.2,'d_cut':[200,250],'m_cut':[5.6,6.0]},}} \
-                      }  \
-                  ):
+                      },  \
+                  ngaModelVersion='2014'
+		  ):
 
 	# Reference models (two flags, 4 digits)
 	self.rup_model_ids = rup_model_ids
@@ -51,6 +52,8 @@ class cybershk_nga:
 	self.NGAs = NGAs     
 	self.Reference = Reference
 	
+	self.ngaModelVersion = ngaModelVersion 
+
 	# Those paths should be ready before running anything
 	self.wkd = wkd
 	self.util = os.path.join( self.wkd, 'utils' )
@@ -570,7 +573,7 @@ class cybershk_nga:
 	return np.array(sites_flat1)
 
 
-    def nga_Py(self, sid, meta_rup, meta, sites_flat=None, ref=0, Ts=None, model_name='BA', NGAdict=None, modelVersion='2014'):
+    def nga_Py(self, sid, meta_rup, meta, sites_flat=None, ref=0, Ts=None, model_name='BA', NGAdict=None):
 	"""
 	Compute NGA model, or reference models for given rupture set 
 	Using Python NGA classes to compute
@@ -581,6 +584,8 @@ class cybershk_nga:
 	rake,dip,Ztor,Zbom = meta_rup[4:]
 
 	W = (Zbom-Ztor)/np.sin(dip*np.pi/180.)   #
+	
+	modelVersion = self.ngaModelVersion 
 
 	if modelVersion == '2014': 
 	    # check the application of pynga for NGA2
@@ -644,63 +649,6 @@ class cybershk_nga:
 		    ngaP[Tkey].append( [list(median), list(np.log(std)), list(np.log(tau)), list(np.log(sigma))] )
 	    
 	return ngaP   # [Tkey][irup][ista]
-
-
-    def nga2_Py(self, sid, meta_rup, meta, sites_flat=None, ref=0, Ts=None, model_name='BA', NGAdict=None):
-	"""
-	Compute NGA model, or reference models for given rupture set 
-	Using Python NGA classes to compute
-	and return Ekxs which has length Ns
-	"""
-	# commonly used predictors in all NGA models
-	Mws = meta_rup[0]
-	rake,dip,Ztor,Zbom = meta_rup[4:]
-
-	W = (Zbom-Ztor)/np.sin(dip*np.pi/180.)   #
-    
-	    
-	# sitesinfo
-	if sites_flat == None: 
-	    sites_flat = self.sites_flatfile(sid,meta,meta_rup)
-
-	tmp1 = np.array( sites_flat )
-	Vs30 = list( tmp1[:,1] )   # in m/s
-	Z25 = list( tmp1[:,2] )    # in km
-	Z10 = list( tmp1[:,3] )    # in m
-	Rjb = list( tmp1[:,4] )
-	Rrup = list( tmp1[:,5] )
-	Rx = list( tmp1[:,6] )
-	del( tmp1 )
-
-	if ref == 0:
-	    if NGAdict == None:
-		dict1 = self.NGAs
-	    else:
-		dict1 = NGAdict # for updating purposes
-	else:
-	    dict1 = self.Reference
-
-	if Ts != None: 
-	    periods = Ts 
-	else: 
-	    periods = self.periods 
-
-	# use the new NGA utils (combinations)
-	ngaP = {}
-	for ip in xrange( len(periods) ):
-	    Ti = periods[ip] 
-	    Tkey = '%.2f'%Ti    # attention to the 0.075
-	    ngaP[Tkey] = []
-	    for irup in xrange( len(Mws) ):
-		Mw = Mws[irup]
-		median, std, tau, sigma = NGA14(model_name, Mw, Rjb, Vs30, Ti, rake=rake,Mech=None,NGAs=dict1, \
-		                                Rrup=Rrup, Rx=Rx, dip=dip,W=W,Ztor=Ztor,Z25=Z25,Z10=Z10,Fas=0,AB11=None,VsFlag=0)
-		
-		ngaP[Tkey].append( [list(median), list(np.log(std)), list(np.log(tau)), list(np.log(sigma))] )
-
-	return ngaP   # [Tkey][irup][ista]
-
-
 
 
     def SC08_cpt( self, rids ):
@@ -1295,6 +1243,8 @@ class cybershk_nga:
 		Nm, Nh, Nf, Nsta = Gkxmfs[ik].shape
 		tmp = np.zeros( (Nm,Nh,Nsta) )
 		sid = Sources[ik] 
+		print 'Source %s'%sid
+		
 		ngaP = self.nga_Py( sid, rups_info[ik], sites_info[ik], ref=1, Ts = [Ti,], model_name = RefModelName )
 		Mws = rups_info[ik][0]
 		ngaD, IDP00 = self.directivity_SC08(sid, Mws, Nh, sites_info[ik], rups_info[ik], ref=1, Ts = [Ti,], model_name = RefModelName, IDPcpt=True)
@@ -1308,6 +1258,8 @@ class cybershk_nga:
 			    tmp[ir,ih,ista] = np.log( ngaP[Tkey][ir][0][ista] ) + np.log( np.array(ngaD[Tkey][ir])[ih,ista] ) * DFlag
 		RefModel.append( tmp )
 		del(tmp)
+	    
+	    print time.localtime() 
 
 	    # 3. Prepare original NGA models (with directivity controlled)
 	    print 'NGA model preparation'
@@ -1322,22 +1274,24 @@ class cybershk_nga:
 		    Nm, Nh, Nf, Nsta = Gkxmfs[ik].shape
 		    tmp = np.zeros( (Nm,Nh,Nsta) )
 		    sid = Sources[ik] 
-		    #print 'Source %s'%sid 
 
 		    if ngaP0k == None:
-			#print 'compute NGA model'
+			print 'compute NGA model'
 			ngaP_tmp = self.nga_Py( sid, rups_info[ik], sites_info[ik], Ts = [Ti,], model_name = nga )
 			ngaP = ngaP_tmp[Tkey]
 		    else: 
 			ngaP = ngaP0k[nga][ik][Tkey]
+                    print time.localtime() 
 
 		    if ngaD0k == None: 
-			#print 'compute NGA directivity model'
+			print 'compute NGA directivity model'
 			Mws = rups_info[ik][0]
 			ngaD_tmp = self.directivity_SC08(sid, Mws, Nh, sites_info[ik], rups_info[ik], Ts = [Ti,], model_name = nga )
 			ngaD = ngaD_tmp[Tkey]
 		    else: 
 			ngaD = ngaD0k[nga][ik][Tkey]
+	            print 'complete %s calculation for Source %s'%(nga, sid)
+                    print time.localtime() 
 
 		    for ir in xrange( Nm ):
 			for ista in xrange( Nsta ):
