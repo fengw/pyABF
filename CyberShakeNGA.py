@@ -172,7 +172,7 @@ class cybershk_nga:
 	self.method = {'name':'exp', 'smooth':smooth}
 
 	# sitedata (used in cybershk_sites function)
-	if self.vel_id in [2,4,]: 
+	if self.vel_id in [2,4,7]: 
 	    # CVM-H Basin depth info for the same set of sites
 	    self.cybershk_sitedata = wkd+'/data/Sites/cybershk_sites_info_cvmh.dat'
 	if self.vel_id in [1,]: 
@@ -869,7 +869,8 @@ class cybershk_nga:
 		ngaD[nga] = []
 
 	meta1_sites = []; meta1_rups=[]; Nhs = []
-	sids0, rids = RupSelect( self.sids, self.cybershk_database_psword )
+	sids0, rids = RupSelect( self.sids, self.cybershk_database_psword, erf_id=self.erf_id )
+	print self.sids, rids
 	for ik in xrange( len(self.sids) ):
 	    sid = self.sids[ik]
 	    Sources.append(sid)
