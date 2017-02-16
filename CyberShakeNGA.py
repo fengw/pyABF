@@ -1212,6 +1212,8 @@ class cybershk_nga:
 	# =================
 	for it, Ti in enumerate( self.periods ): 
 
+	    period_tic = time.time() 
+
 	    Tkey = '%.2f'%Ti
 	    print 'Analysis at periods = %s sec'%(Tkey)
 
@@ -1263,8 +1265,6 @@ class cybershk_nga:
 		RefModel.append( tmp )
 		tmp = 0
 	    
-	    print time.localtime() 
-
 	    # 3. Prepare original NGA models (with directivity controlled)
 	    print 'NGA model preparation'
 	    TargetModel = {}
@@ -1278,14 +1278,16 @@ class cybershk_nga:
 		    Nm, Nh, Nf, Nsta = Gkxmfs[ik].shape
 		    sid = Sources[ik] 
 
+		    tic = time.time()
 		    if ngaP0k == None:
 			print 'compute NGA model'
 			ngaP_tmp = self.nga_Py( sid, rups_info[ik], sites_info[ik], Ts = [Ti,], model_name = nga )
 			ngaP = ngaP_tmp[Tkey]
 		    else: 
 			ngaP = ngaP0k[nga][ik][Tkey]
-                    print time.localtime() 
+		    print 'time elapsed: %.2f'%(time.time()-tic)
 
+		    tic = time.time()
 		    if ngaD0k == None: 
 			print 'compute NGA directivity model'
 			Mws = rups_info[ik][0]
@@ -1293,19 +1295,20 @@ class cybershk_nga:
 			ngaD = ngaD_tmp[Tkey]
 		    else: 
 			ngaD = ngaD0k[nga][ik][Tkey]
-	            print 'complete %s calculation for Source %s'%(nga, sid)
-                    print time.localtime() 
+		    print 'time elapsed: %.2f'%(time.time()-tic)
 
+	            tic = time.time()
+		    print 'Assemble the directivity'
 		    tmp = np.zeros( (Nm,Nh,Nsta) )
 		    for ir in xrange( Nm ):
 			tmp[ir,:,:] = np.log( np.array(ngaD[ir]) ) * hypoPDF[nga]  # size nh,nsta
 			tmp[ir,...,:] += np.log(ngaP[ir][0])   # size nsta
+		    print 'time elapsed: %.2f'%(time.time()-tic)
 		    
 		    TargetModel[nga].append( tmp )
 		    tmp=0
 		    ngaP=0
 		    ngaD=0
-
 
 	    print '='*30
 	    end_time0 = HourMinSecToSec(BlockName='Preparation of CyberShake, Ref, and NGAs finished')
@@ -1917,6 +1920,8 @@ class cybershk_nga:
 		end_time0 = HourMinSecToSec(BlockName='ABF results saving ends')
 		hour,min,sec = SecToHourMinSec(end_time0-start_time0,BlockName='ABF saving')
 		print '='*30 + '\n'
+	    
+	    print 'The ABF for this period, time elapsed: %.2f'%(time.time()-period_tic)
 
 
     # Update model coefficients in NGA models (basin term, directivity)
