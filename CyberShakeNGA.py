@@ -1229,11 +1229,10 @@ class cybershk_nga:
 		    tmpCS.append( np.log( CyberShakeRvar[ik][irup][Tkey] ) )   # [irup][ih,islip,ista]
 		tmp_CS = np.array( tmpCS )
 		Nm, Nh, Nf, Nsta = tmp_CS.shape
-		print Nh, Nf
+		print 'nHypo, nSlip:', Nh, Nf
 		Gkxmfs.append( tmp_CS )
 		tmpCS = 0
 		tmp_CS=0
-		#del(tmpCS, tmp_CS)
 
 	    # 2. Use pre-defined NGA models as other reference model
 	    # Note: you can just generate tmp[ik,ir,ih,ista] (and do the abf with pdf_f = None to reduce the memory and calculation time) 
@@ -1255,14 +1254,14 @@ class cybershk_nga:
 		# compute IDP (as the parameter for directivity effects)
 		IDP0.append( np.array( IDP00 ) )
 
-		# time consuming part (why only ERF36, because number of hypocenters, then the loop operation is very slow, use numpy array operation for summing)
+		# time consuming part 
+		# (why only ERF36, because number of hypocenters, then the loop operation is very slow, use numpy array operation for summing)
 		tmp = np.zeros( (Nm,Nh,Nsta) )
 		for ir in xrange( Nm ):
 		    tmp[ir,:,:] = np.log( np.array(ngaD[Tkey][ir])) * DFlag  # size nh,nsta
 		    tmp[ir,...,:] += np.log(ngaP[Tkey][ir][0])   # size nsta
 		RefModel.append( tmp )
 		tmp = 0
-		#del(tmp)
 	    
 	    print time.localtime() 
 
@@ -1301,14 +1300,11 @@ class cybershk_nga:
 		    for ir in xrange( Nm ):
 			tmp[ir,:,:] = np.log( np.array(ngaD[ir]) ) * hypoPDF[nga]  # size nh,nsta
 			tmp[ir,...,:] += np.log(ngaP[ir][0])   # size nsta
-			#for ista in xrange( Nsta ):
-			 #   for ih in xrange( Nh ): 
-			#	tmp[ir,ih,ista] = np.log( ngaP[ir][0][ista] ) + np.log( np.array(ngaD[ir])[ih,ista] ) * hypoPDF[nga]
+		    
 		    TargetModel[nga].append( tmp )
 		    tmp=0
 		    ngaP=0
 		    ngaD=0
-		    #del(tmp,ngaP,ngaD)
 
 
 	    print '='*30
