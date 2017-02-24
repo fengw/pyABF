@@ -113,7 +113,7 @@ class cybershk_nga:
 
 	# NGA models (08 and SC08 available periods)
 	self.NGAmodel = ['CB','BA','CY','AS',]
-	self.Tlist = [2.0, 3.0, 5.0, 10.0]
+	self.Tlist = [1.0, 2.0, 3.0, 5.0, 10.0]   # use by directivity 
 
 	# CyberShake database
 	hostname = 'focal.usc.edu'  # host                            
@@ -756,7 +756,7 @@ class cybershk_nga:
 		dict1 = NGAdict 
 	else:
 	    # compute reference model
-	    dict1 = self.Reference
+	    dict1 = self.Reference 
 
 	if Ts != None: 
 	    periods = Ts
@@ -765,11 +765,11 @@ class cybershk_nga:
 
 	ih_start = 0
 	ih_end = Nh 
-
+	
 	# D flatfile
 	if D_flat == None: 
 	    D_flat = self.D_flatfile( sid, meta, meta_rup )
-
+        
 	Rrup = {}; ctildepr = {}; s = {}; h = {}; Rfn = {}; Rfp = {}
 	for ih in range( ih_start, ih_end ):
 	    hkey = '%s'%ih
@@ -822,7 +822,6 @@ class cybershk_nga:
 		    stanam = sites_run[ista]
 		    ngaD[ih-ih_start].append( tmp1[stanam] )
 
-
 	if NewCoefs != None or cuteps != None:
 	    #print 'Use nga.SC08_model to compute SC'
 	    ngaD = {} 
@@ -870,7 +869,6 @@ class cybershk_nga:
 
 	meta1_sites = []; meta1_rups=[]; Nhs = []
 	sids0, rids = RupSelect( self.sids, self.cybershk_database_psword, erf_id=self.erf_id )
-	print self.sids, rids
 	for ik in xrange( len(self.sids) ):
 	    sid = self.sids[ik]
 	    Sources.append(sid)
@@ -894,6 +892,7 @@ class cybershk_nga:
 	    if NGAcpt:
 		for inga, nga in enumerate( self.NGAmodel ):
 		    ngaP[nga].append(self.nga_Py(sid, meta_rup.rups_info['MR'], meta.sites_info, model_name=nga))
+
 		for inga, nga in enumerate( self.NGAmodel ):
 		    ngaD[nga].append(self.directivity_SC08(sid, meta_rup.rups_info['MR'][0],Nh, meta.sites_info, meta_rup.rups_info['MR'], model_name=nga) )
 	    # ngaP [nga][ik][Tkey][ir][ista] 
@@ -1285,25 +1284,29 @@ class cybershk_nga:
 			ngaP = ngaP_tmp[Tkey]
 		    else: 
 			ngaP = ngaP0k[nga][ik][Tkey]
-		    print 'time elapsed: %.2f'%(time.time()-tic)
+
+		    print 'time elapsed: %.2f s'%(time.time()-tic)
 
 		    tic = time.time()
 		    if ngaD0k == None: 
 			print 'compute NGA directivity model'
 			Mws = rups_info[ik][0]
+			# debug AS directivity at 1.0s ...
 			ngaD_tmp = self.directivity_SC08(sid, Mws, Nh, sites_info[ik], rups_info[ik], Ts = [Ti,], model_name = nga )
 			ngaD = ngaD_tmp[Tkey]
 		    else: 
 			ngaD = ngaD0k[nga][ik][Tkey]
-		    print 'time elapsed: %.2f'%(time.time()-tic)
+
+		    print 'time elapsed: %.2f s'%(time.time()-tic)
 
 	            tic = time.time()
 		    print 'Assemble the directivity'
+		    
 		    tmp = np.zeros( (Nm,Nh,Nsta) )
 		    for ir in xrange( Nm ):
 			tmp[ir,:,:] = np.log( np.array(ngaD[ir]) ) * hypoPDF[nga]  # size nh,nsta
 			tmp[ir,...,:] += np.log(ngaP[ir][0])   # size nsta
-		    print 'time elapsed: %.2f'%(time.time()-tic)
+		    print 'time elapsed: %.2f s'%(time.time()-tic)
 		    
 		    TargetModel[nga].append( tmp )
 		    tmp=0
@@ -1464,7 +1467,7 @@ class cybershk_nga:
 		DkxsN = []; CksN = []; BsN = []; AN = []
 		for inga in xrange( len(self.NGAmodel) ):
 		    nga = self.NGAmodel[inga]
-
+		    
 		    # interpolation of each NGA models
 		    Ekxms0N1, Hkxs0N1 = im_decom1(TargetModel[nga], pdf_m, pdf_x0, pdf_kf=None)   # first step (average out)
 		    Dkxs0N1, Cks0N1, Bs0N1, A0N1 = im_decom2( Hkxs0N1, Nsta0, pdf_x0, pdf_k, pdf_s0 )
@@ -2205,10 +2208,7 @@ class cybershk_nga:
 		    sigmaDkey = '%s'%'%.2f'%sigmas[isigma]
 		    sigmaD = []; sigmaD0min = 10000 
 		    for item in xrange( len(coefs) ):
-
-
 			#print 'deal with coef %s'%item 
-
 			# use the updated coefficients:
 			#dict1['SC']['NewCoefs'][NGAmodel][coefkey] = coefs[item]
 
