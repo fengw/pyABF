@@ -30,7 +30,6 @@ from pynga.AS08 import *
 from pynga.SC08 import *
 from pynga.utils import *
 
-
 # ================
 # Geo related utilities
 # ================
@@ -600,12 +599,16 @@ def im_gen(cursor, sid, rid, stanam, \
     bb = 0: get all verified simulations
     otherwise Max_Frequency = bb
     """
-    
+    debugPlot = False
+    #if stanam == 'STNI': debugPlot = True
+    #if debugPlot: print stanam 
+
     # CyberShake study
     erf_id, sgt_id, rup_scenario_id, vel_id = rup_model_ids
 
     # Get site id for further selection
     query = "select * from %s where %s = '%s'"%('CyberShake_Sites','CS_Short_Name',stanam)
+    #if debugPlot: print query
     cursor.execute( query )       # run query
     row_sites = cursor.fetchone()  
 
@@ -627,6 +630,7 @@ def im_gen(cursor, sid, rid, stanam, \
 	    query = "select * from %s where ERF_ID = %s and \
 		     SGT_Variation_ID = %s and Rup_Var_Scenario_ID = %s and Velocity_Model_ID= %s and \
 		     Site_ID = %s and Status = '%s'"%('CyberShake_Runs',erf_id,sgt_id, rup_scenario_id, vel_id, row_sites[0],'Verified')
+    #if debugPlot: print query 
 
     cursor.execute( query )       # run query
     try:
@@ -636,9 +640,11 @@ def im_gen(cursor, sid, rid, stanam, \
     except:
 	fid_stdout.write('There is no verified run for parameter set (erfid,sgtid,rup_var_scenario_id,vel_id,site_name)=(%s,%s,%s,%s,%s)\n'%(erf_id,sgt_id,rup_scenario_id,vel_id,stanam))
 	return sites_info, Ek
+    #print site_run_id 
 
     # PeakAmplitude selection (rupture_ID, some sources donot use part of their rupture))
     query = "select Source_ID, Rupture_ID from %s where Run_ID = %s and Source_ID = %s and Rup_Var_ID = %s"%('PeakAmplitudes',site_run_id,sid,0)
+    #if debugPlot: print query
     cursor.execute( query )       # run query
     row_Sa = cursor.fetchall()  
     Nrup = len(row_Sa)
@@ -665,6 +671,7 @@ def im_gen(cursor, sid, rid, stanam, \
 	
 	# get hypo slip index 
 	query = "select * from %s where ERF_ID = %s and Rup_Var_Scenario_ID = %s and Source_ID = %s and Rupture_ID = %s"%('Rupture_Variations',erf_id,rup_scenario_id,sid,rid)
+#	if debugPlot: print query
 	cursor.execute( query )       # run query
 	row_rup_var = cursor.fetchall()  
 	tmp = row_rup_var[-1][5].strip().split('-')
@@ -678,46 +685,73 @@ def im_gen(cursor, sid, rid, stanam, \
 
 	# Get all periods (from IM_Types table based on IM_Type_ID)
 	query = "select * from %s"%('IM_Types')
+#	if debugPlot: print query
 	cursor.execute( query )       # run query
 	row_imtype = cursor.fetchall()  
 	periods = {}; 
 	for ir in xrange( len(row_imtype) ):
 	    periods[str(ir+1)] = row_imtype[ir][2]     # unit: sec; Sa unit: cm/s^2
-						       # ir+1 is the IM_Type_ID as shown in the table
 
 	# intensity Measure dictionary
 	Ek[stanam] = {}
-
-	# PeakAmplitude selection (rupture_ID, some sources donot use part of their rupture))
-	query = "select * from %s where Run_ID = %s and Source_ID = %s and Rupture_ID = %s"%('PeakAmplitudes',site_run_id,sid,rid)
-	cursor.execute( query )       # run query
-	row_Sa = cursor.fetchall()  
-	nvar = len(row_Sa)
-	if nvar == 0:
-	    fid_stdout.write('There is no SA for (Site_name, Site_ID, run_id, sid,rid) = (%s, %s,%s,%s,%s)\n'%(row_sites[2],row_sites[0],site_run_id,sid,rid))
-	    return sites_info, Ek
-	else:
-	    pass
-	
-	# get all available periods
-	Nt = 0; Ts = []
-	for ik in xrange( len(row_Sa) ):
-	    IMtype = row_Sa[ik][4]
-	    if row_Sa[ik][2] == 0:  # just deal with the first rupture variation
-		if 1<= IMtype <= 26 or 82<= IMtype <=99:   
-		    # For geometric mean and 1-26: 2 to 10 sec, 82-99: 0.1-1.666 sec (broadband)
-		    Nt = Nt+1
-		    Ts.append( periods[str(IMtype)] )
+	if erf_id == 36: 
+	    # PeakAmplitude selection (rupture_ID, some sources donot use part of their rupture))
+	    query = "select * from %s where Run_ID = %s and Source_ID = %s and Rupture_ID = %s and IM_Type_ID in (86,26,21,11,1)"%('PeakAmplitudes',site_run_id,sid,rid)
+#	    if debugPlot: print query
+	    cursor.execute( query )       # run query
+	    row_Sa = cursor.fetchall() 
+	    #if debugPlot: print row_Sa
+	    nvar = len(row_Sa)
+	    if nvar == 0:
+		fid_stdout.write('There is no SA for (Site_name, Site_ID, run_id, sid,rid) = (%s, %s,%s,%s,%s)\n'%(row_sites[2],row_sites[0],site_run_id,sid,rid))
+		return sites_info, Ek
 	    else:
-		break
+		pass
 
-	tmpSa = np.zeros( (Nh, Nf, Nt) )
-	for ih in xrange( Nh ):
-	    for islip in xrange( Nf ):
-		ivar = islip*Nh + ih 
-		for it in xrange( Nt ):
-		    ik = ivar * Nt + it
-		    tmpSa[ih,islip,it] = row_Sa[ik][5]/980.   # in gravity
+	    Ts = [10.0, 5.0, 3.00003, 2.0, 1.0]
+	    Nt = 5 
+
+	    tmpSa = np.zeros( (Nh, Nf, Nt) )
+	    for ih in xrange( Nh ):
+		for islip in xrange( Nf ):
+		    ivar = islip*Nh + ih 
+		    for it in xrange( Nt ):
+			ik = ivar * Nt + it
+			tmpSa[ih,islip,it] = row_Sa[ik][5]/980.   # in gravity
+#		    if debugPlot: print tmpSa[ih,islip,:]*980. 
+
+	else:
+	    # PeakAmplitude selection (rupture_ID, some sources donot use part of their rupture))
+	    query = "select * from %s where Run_ID = %s and Source_ID = %s and Rupture_ID = %s"%('PeakAmplitudes',site_run_id,sid,rid)
+	    cursor.execute( query )       # run query
+	    row_Sa = cursor.fetchall() 
+	    nvar = len(row_Sa)
+	    if nvar == 0:
+		fid_stdout.write('There is no SA for (Site_name, Site_ID, run_id, sid,rid) = (%s, %s,%s,%s,%s)\n'%(row_sites[2],row_sites[0],site_run_id,sid,rid))
+		return sites_info, Ek
+	    else:
+		pass
+	    
+	    # get all available periods
+	    Nt = 0; Ts = []
+	    for ik in xrange( len(row_Sa) ):
+		IMtype = row_Sa[ik][4]
+		if row_Sa[ik][2] == 0:  # just deal with the first rupture variation
+		    if 1<= IMtype <= 26 or 82<= IMtype <=99:   
+			# For geometric mean and 1-26: 2 to 10 sec, 82-99: 0.1-1.666 sec (broadband)
+			Nt = Nt+1
+			Ts.append( periods[str(IMtype)] )
+		else:
+		    break
+
+	    tmpSa = np.zeros( (Nh, Nf, Nt) )
+	    for ih in xrange( Nh ):
+		for islip in xrange( Nf ):
+		    ivar = islip*Nh + ih 
+		    for it in xrange( Nt ):
+			ik = ivar * Nt + it
+			tmpSa[ih,islip,it] = row_Sa[ik][5]/980.   # in gravity
+	
 	Ek[stanam] = tmpSa.tolist()
 	
 	# all periods information (corresponding to it)

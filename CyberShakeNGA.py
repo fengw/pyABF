@@ -1277,6 +1277,8 @@ class cybershk_nga:
 		    Nm, Nh, Nf, Nsta = Gkxmfs[ik].shape
 		    sid = Sources[ik] 
 
+		    print 'Source %s'%sid
+		    
 		    tic = time.time()
 		    if ngaP0k == None:
 			print 'compute NGA model'
